@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.local
+.DS_Store
+*.log
+gemini_error.txt
+gemini_models_error.txt
+available_models.json
+dist/

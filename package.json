@@ -1,0 +1,9 @@
+{
+  "name": "paath-mitra-root",
+  "version": "1.0.0",
+  "scripts": {
+    "backend-dev": "cd backend && npm run dev",
+    "frontend-dev": "cd frontend && npm run dev",
+    "dev": "npx -y concurrently \"npm run backend-dev\" \"npm run frontend-dev\""
+  }
+}
