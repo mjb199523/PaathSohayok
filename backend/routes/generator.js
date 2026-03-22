@@ -4,18 +4,19 @@ const { verifyToken } = require('../middleware/auth');
 
 function getNextMidnightPT() {
     const now = new Date();
-    let d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), 0, 0, 0));
-    let safety = 0;
-    while (safety < 48) {
-        d.setUTCHours(d.getUTCHours() + 1);
-        const ptHour = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', hourCycle: 'h23' }).format(d);
-        const match = ptHour.match(/\d+/);
-        if (match && parseInt(match[0], 10) === 0) {
-            return d;
-        }
-        safety++;
-    }
-    return new Date(Date.now() + 86400 * 1000);
+    // Start from "now" in PT
+    const ptStr = now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
+    const ptDate = new Date(ptStr);
+    
+    // Create "tomorrow" in PT
+    const tomorrowPT = new Date(ptDate);
+    tomorrowPT.setDate(tomorrowPT.getDate() + 1);
+    tomorrowPT.setHours(0, 0, 0, 0);
+    
+    // Convert that PT "tomorrow 00:00" back to a global timestamp
+    // We do this by calculating the offset difference
+    const diff = tomorrowPT.getTime() - ptDate.getTime();
+    return new Date(now.getTime() + diff);
 }
 
 // Backend Memory Lock to prevent early hits from resetting Gemini quota
