@@ -165,7 +165,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const handleDownloadGlobal = async (item) => {
       try {
           setDownloadingId(item.id);
-          const response = await axios.get(`${API_URL}/api/creations/get/${item.id}`, {
+          const response = await axios.get(`${API_URL}/api/admin/creations/${item.id}`, {
               headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
           });
           setPrintData(response.data);
