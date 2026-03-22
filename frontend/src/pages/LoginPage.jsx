@@ -53,14 +53,14 @@ const LoginPage = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center py-12 px-6 font-inter overflow-y-auto">
-      {/* Brand Logo Above Card */}
-      <div className="flex items-center gap-3 mb-8">
-          <div className="w-9 h-9 bg-[#2E7D32] rounded-lg flex items-center justify-center text-white shadow-sm">
-              <Library className="w-5 h-5 border-none" />
+      {/* Standard Brand Logo Header */}
+      <div className="flex items-center gap-4 mb-8">
+          <div className="w-10 h-10 bg-pm-green rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-900/10">
+              <Library className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-              <h2 className="text-2xl font-bold font-heading text-[#111827] leading-none">PaathSohayok</h2>
-              <span className="text-[10px] block -mt-1 font-semibold text-pm-green tracking-widest uppercase">{"\u09AA\u09BE\u09A0\u09B8\u09B9\u09BE\u09DF\u0995"}</span>
+              <h1 className="text-2xl font-black font-heading text-gray-900 leading-none">PaathSohayok</h1>
+              <span className="text-[11px] font-bold text-pm-green tracking-widest uppercase">পাঠসহায়ক</span>
           </div>
       </div>
 
@@ -151,7 +151,18 @@ const LoginPage = ({ onLogin }) => {
                 </div>
             </form>
 
-            <div className="mt-5 pt-5 border-t border-gray-100">
+            <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col items-center">
+                {/* Standard Footer Logo */}
+                <div className="flex items-center gap-3 mb-4 opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                    <div className="w-7 h-7 bg-pm-green rounded-lg flex items-center justify-center text-white">
+                        <Library className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-sm font-heading text-gray-900 leading-none">PaathSohayok</span>
+                        <span className="text-[8px] font-bold text-pm-green tracking-widest uppercase">পাঠসহায়ক</span>
+                    </div>
+                </div>
+                
                 <p className="text-[10px] text-center text-gray-400 leading-relaxed font-medium mb-3">
                     By signing in, you agree to our processing of your academic data. 
                     <br /> This platform is compliant with <b>DPDP Act (2023)</b> standards.
