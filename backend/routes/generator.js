@@ -104,11 +104,25 @@ Assessment Questions:
 
   } catch (error) {
     console.error('Streaming Error:', error);
-    // If it fails before headers sent, send error JSON
+    
+    let userMessage = error.message || 'Generation Interrupted';
+    
+    // Clean up Gemini Quota Errors
+    if (userMessage.includes('429') || userMessage.includes('quota')) {
+        const resetDate = getNextMidnightPT();
+        const timeStr = resetDate.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true,
+            timeZoneName: 'short'
+        });
+        userMessage = `⚠️ Daily AI Limit Exceeded. Please try again after midnight (${timeStr}).`;
+    }
+
     if (!res.headersSent) {
-      res.status(500).json({ error: error.message || 'Stream failed' });
+      res.status(500).json({ error: userMessage });
     } else {
-      res.write(`data: ${JSON.stringify({ error: "Interrupted" })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: userMessage })}\n\n`);
       res.end();
     }
   }
