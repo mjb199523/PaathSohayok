@@ -84,9 +84,11 @@ router.post('/', async (req, res) => {
 router.get('/my', async (req, res) => {
   try {
     const userId = req.user.id; // Only fetch data for the LOGGED IN user
+    
+    // OPTIMIZATION: Do NOT fetch the large 'content' field in the list view
     const { data, error } = await supabaseAdmin
       .from('creations')
-      .select('*')
+      .select('id, file_name, topic, subject, class, created_at, language')
       .eq('user_id', userId)
       .eq('is_deleted', false) 
       .order('created_at', { ascending: false });
@@ -96,6 +98,26 @@ router.get('/my', async (req, res) => {
   } catch (error) {
     console.error('Error fetching history:', error);
     res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+// 2.5 New Route: Get single creation with full content (For viewing/downloading)
+router.get('/get/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    const { data, error } = await supabaseAdmin
+      .from('creations')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve content' });
   }
 });
 

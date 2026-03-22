@@ -59,6 +59,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
       const response = await axios.get(`${API_URL}/api/creations/my`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
+      // The content field is now empty in the list view, which is fine
       setHistory(response.data);
     } catch (err) {
       console.error('Failed to fetch history');
@@ -91,10 +92,10 @@ const TeacherDashboard = ({ user, onLogout }) => {
       if (manual) {
           setIsSaved(true);
           setResetTimer(true);
-          setResult(null); // Remove file visually
           
-          // Wait 5 seconds with loader, then refresh
+          // Wait 3 seconds with loader, then refresh
           setTimeout(() => {
+              setResult(null); 
               setFormData({
                 className: '',
                 subject: '',
@@ -105,7 +106,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
               setIsSaved(false);
               setResetTimer(false);
               window.scrollTo({ top: 0, behavior: 'smooth' });
-          }, 5000);
+          }, 3000);
       }
     } catch (err) {
       console.error('Failed to save:', err);
@@ -222,22 +223,60 @@ const TeacherDashboard = ({ user, onLogout }) => {
     if (loading || (lockExpiry && Date.now() < lockExpiry)) return;
     
     setLoading(true);
-    setResult(null);
+    setResult(""); // Start with empty string for streaming
     setIsSaved(false);
+    
     try {
       const payload = overrideData || formData;
-      const response = await axios.post(`${API_URL}/api/generate`, payload, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
+      const response = await fetch(`${API_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('pm_token')}`
+        },
+        body: JSON.stringify(payload)
       });
-      setResult(response.data.content);
+
+      if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || 'Generation failed');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace('data: ', '').trim();
+            if (dataStr === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.chunk) {
+                accumulatedContent += parsed.chunk;
+                setResult(accumulatedContent);
+              } else if (parsed.error) {
+                throw new Error(parsed.error);
+              }
+            } catch (e) {
+              // Ignore small parse errors during stream
+            }
+          }
+        }
+      }
     } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Generation failed. Please try again.';
-      alert(errorMsg);
-      
+      console.error('Generation failure:', err);
+      alert(err.message || 'Generation failed. Please try again.');
       // If rate limited, lock the button
-      if (err.response?.status === 429) {
-          const waitVal = err.response?.data?.retryAfter || 60;
-          setLockExpiry(Date.now() + (waitVal * 1000)); 
+      if (err.message.toLowerCase().includes('wait') || err.message.toLowerCase().includes('quota')) {
+          setLockExpiry(Date.now() + 60000); 
       }
     } finally {
       setLoading(false);
@@ -281,12 +320,23 @@ const TeacherDashboard = ({ user, onLogout }) => {
     document.title = originalTitle;
   };
 
-  const handleDownloadFromHistory = (item) => {
-      setPrintData(item);
-      setTimeout(() => {
-          handlePrint(item);
-          setPrintData(null);
-      }, 300);
+  const handleDownloadFromHistory = async (item) => {
+      try {
+          setLoading(true);
+          // Fetch full content only when needed
+          const response = await axios.get(`${API_URL}/api/creations/get/${item.id}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
+          });
+          setPrintData(response.data);
+          setTimeout(() => {
+              handlePrint(response.data);
+              setPrintData(null);
+          }, 500);
+      } catch (err) {
+          alert("Failed to retrieve archived content for PDF Generation.");
+      } finally {
+          setLoading(false);
+      }
   };
 
   return (

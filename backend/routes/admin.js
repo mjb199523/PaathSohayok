@@ -136,9 +136,10 @@ router.put('/users/:id', verifyAdmin, async (req, res) => {
 // 1. List ALL teacher-generated creations with user details
 router.get('/creations', verifyAdmin, async (req, res) => {
   try {
+    // OPTIMIZATION: Do NOT fetch the large 'content' field in the global list
     const { data, error } = await supabaseAdmin
       .from('creations')
-      .select('*, profiles(name, email)') // Join with profiles
+      .select('id, file_name, class, subject, topic, language, created_at, profiles(name, email)') 
       .order('created_at', { ascending: false });
 
     if (error) throw error;
