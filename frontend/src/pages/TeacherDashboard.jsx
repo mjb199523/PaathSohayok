@@ -177,18 +177,18 @@ const TeacherDashboard = ({ user, onLogout }) => {
           else if (tl.includes('assess') || tl.includes('মূল্যা')) category = 'assessment';
 
           let finalTitle = rawParsedTitle;
-          if (language === 'Assamese') {
-              if (category === 'general') finalTitle = 'General Content (তথ্য)';
+          if (language.toLowerCase() === 'assamese') {
+              if (category === 'general' && !rawTitleMatch) finalTitle = 'Information (তথ্য)';
               else if (category === 'lesson') finalTitle = 'Lesson Plan (পাঠ পৰিকল্পনা)';
               else if (category === 'activity') finalTitle = 'Classroom Activities (শ্ৰেণীকক্ষৰ কাৰ্যসূচী)';
               else if (category === 'homework') finalTitle = 'Homework (গৃহকাৰ্য)';
-              else if (category === 'assessment') finalTitle = 'Assessmenrt Questions (মূল্যায়নৰ প্ৰশ্ন)';
+              else if (category === 'assessment') finalTitle = 'Assessment Questions (মূল্যায়নৰ প্ৰশ্ন)';
           } else {
-              if (category === 'general') finalTitle = 'General Content';
+              if (category === 'general' && !rawTitleMatch) finalTitle = 'Information Detail';
               else if (category === 'lesson') finalTitle = 'Lesson Plan';
               else if (category === 'activity') finalTitle = 'Classroom Activities';
               else if (category === 'homework') finalTitle = 'Homework';
-              else if (category === 'assessment') finalTitle = 'Assessmenrt Questions';
+              else if (category === 'assessment') finalTitle = 'Assessment Questions';
           }
 
           let body = section.replace(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|Assessmenrt Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i, '');
@@ -271,6 +271,13 @@ const TeacherDashboard = ({ user, onLogout }) => {
             }
           }
         }
+      }
+      
+      // AUTO-SCROLL FIX: Scroll to content once complete
+      if (accumulatedContent && contentRef.current) {
+          setTimeout(() => {
+              contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 300);
       }
     } catch (err) {
       console.error('Generation failure:', err);
