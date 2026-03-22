@@ -17,8 +17,10 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [usersPage, setUsersPage] = useState(1);
   const [creationsPage, setCreationsPage] = useState(1);
+  const [downloadingId, setDownloadingId] = useState(null);
   const ITEMS_PER_PAGE = 10;
   const [stats, setStats] = useState({ total_creations: 0, pdf_downloads: 0 });
+  const [printData, setPrintData] = useState(null);
 
   useEffect(() => {
     setUsersPage(1);
@@ -131,6 +133,31 @@ const AdminDashboard = ({ user, onLogout }) => {
       fetchUsers();
     } catch (err) {
       alert('Failed to delete user');
+    }
+  };
+
+  const handlePrint = (overrideData = null) => {
+    const data = overrideData || printData;
+    if (!data) return;
+    window.print();
+  };
+
+  const handleDownloadGlobal = async (item) => {
+    try {
+      setDownloadingId(item.id);
+      const response = await axios.get(`${API_URL}/api/admin/creations/${item.id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
+      });
+      setPrintData(response.data);
+      // Wait for React to render the printable hidden div if needed, then print
+      setTimeout(() => {
+        handlePrint(response.data);
+        setPrintData(null);
+      }, 500);
+    } catch (err) {
+      alert("Failed to retrieve content for PDF Generation.");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -393,13 +420,23 @@ const AdminDashboard = ({ user, onLogout }) => {
                                                     {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                                                 </td>
                                                 <td className="px-6 py-4 text-right pr-12 transition-opacity">
-                                                    <button 
-                                                        onClick={() => deleteCreation(c.id)}
-                                                        className="p-2.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-                                                        title="Delete Global Record"
-                                                    >
-                                                        <Trash2 className="w-5 h-5 flex-shrink-0" />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button 
+                                                            disabled={downloadingId === c.id}
+                                                            onClick={() => handleDownloadGlobal(c)}
+                                                            className="p-2.5 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white rounded-lg transition-all min-w-[38px] flex items-center justify-center"
+                                                            title="Download PDF Copy"
+                                                        >
+                                                            {downloadingId === c.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => deleteCreation(c.id)}
+                                                            className="p-2.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                                            title="Delete Global Record"
+                                                        >
+                                                            <Trash2 className="w-5 h-5 flex-shrink-0" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -477,6 +514,53 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
         )}
       </AnimatePresence>
+
+      {/* Hidden Print Content for PDF Generation */}
+      <div className="hidden print:block fixed inset-0 z-[9999] bg-white text-gray-900 p-12 overflow-visible">
+          {printData && (
+              <div className="max-w-4xl mx-auto">
+                  <div className="border-b-4 border-pm-green pb-10 mb-12 flex justify-between items-end">
+                      <div>
+                          <h1 className="text-4xl font-black text-gray-900 mb-2 uppercase tracking-tight">{printData.subject}</h1>
+                          <p className="text-xl font-bold text-pm-green uppercase tracking-widest leading-none">Topic: {printData.topic}</p>
+                          <div className="mt-4 flex gap-4 text-xs font-black text-gray-400 uppercase tracking-widest">
+                              <span>Grade {printData.class}</span>
+                              <span className="text-gray-200">|</span>
+                              <span>{printData.language} Medium</span>
+                          </div>
+                      </div>
+                      <div className="text-right">
+                          <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-1">PaathSohayok AI</p>
+                          <p className="text-sm font-bold text-gray-900">{new Date(printData.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                      </div>
+                  </div>
+                  
+                  <div 
+                    className="prose prose-sm max-w-none text-gray-800 leading-relaxed font-medium"
+                    dangerouslySetInnerHTML={{ 
+                        __html: printData.content
+                            .replace(/---/g, '<hr class="my-8 border-gray-100"/>')
+                            .replace(/\n\n/g, '<br/><br/>')
+                            .replace(/\n/g, '<br/>')
+                    }} 
+                  />
+                  
+                  <div className="mt-20 pt-8 border-t border-gray-100 flex justify-between items-center opacity-30">
+                      <p className="text-[10px] font-black uppercase tracking-widest">© 2026 PaathSohayok Official Record</p>
+                      <p className="text-[10px] font-medium italic text-right">This document was generated by AI assistance and reviewed by educational faculty.</p>
+                  </div>
+              </div>
+          )}
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body * { visibility: hidden; }
+          .print\\:block, .print\\:block * { visibility: visible; }
+          .print\\:block { position: absolute; left: 0; top: 0; width: 100%; }
+          @page { margin: 2cm; }
+        }
+      `}} />
     </div>
   );
 };

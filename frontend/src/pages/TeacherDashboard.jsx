@@ -20,6 +20,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState('');
   const [isSaved, setIsSaved] = useState(false);
@@ -322,7 +323,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
   const handleDownloadFromHistory = async (item) => {
       try {
-          setLoading(true);
+          setDownloadingId(item.id);
           // Fetch full content only when needed
           const response = await axios.get(`${API_URL}/api/creations/get/${item.id}`, {
               headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
@@ -335,7 +336,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
       } catch (err) {
           alert("Failed to retrieve archived content for PDF Generation.");
       } finally {
-          setLoading(false);
+          setDownloadingId(null);
       }
   };
 

@@ -150,7 +150,24 @@ router.get('/creations', verifyAdmin, async (req, res) => {
   }
 });
 
-// 2. Global hard delete (Admin can delete ANY creation)
+// 3. Get single creation with full content (Admin)
+router.get('/creations/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabaseAdmin
+      .from('creations')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve content' });
+  }
+});
+
+// 4. Global hard delete (Admin can delete ANY creation)
 router.delete('/creations/:id', verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
