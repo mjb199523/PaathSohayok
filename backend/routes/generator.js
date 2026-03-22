@@ -118,10 +118,9 @@ Assessment Questions:
             hour: '2-digit', 
             minute: '2-digit', 
             hour12: true,
-            timeZone: 'Asia/Kolkata',
-            timeZoneName: 'short'
+            timeZone: 'Asia/Kolkata'
         });
-        userMessage = `⚠️ Daily AI Limit Exceeded. Please try again after midnight (${timeStr}).`;
+        userMessage = `⚠️ Daily AI Limit Exceeded. Please try again after midnight (${timeStr} IST).`;
     }
 
     if (!res.headersSent) {
