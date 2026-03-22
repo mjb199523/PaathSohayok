@@ -715,11 +715,12 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                                 <td className="px-6 py-4 text-right pr-10 whitespace-nowrap">
                                                     <div className="flex items-center justify-end gap-3 transition-opacity">
                                                         <button 
+                                                            disabled={downloadingId === item.id}
                                                             onClick={() => handleDownloadFromHistory(item)}
-                                                            className="p-2.5 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100/50"
+                                                            className="p-2.5 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100/50 flex items-center justify-center min-w-[42px]"
                                                             title="Download PDF"
                                                         >
-                                                            <Download className="w-4 h-4" />
+                                                            {downloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                                                         </button>
                                                         <button 
                                                             onClick={() => deleteFromHistory(item.id)}

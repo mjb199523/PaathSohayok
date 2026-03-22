@@ -136,6 +136,56 @@ const AdminDashboard = ({ user, onLogout }) => {
     }
   };
 
+  const renderDocumentSectionsPrint = (resultStr, language) => {
+      if (typeof resultStr !== 'string') return null;
+      const sections = resultStr.split(/(?=Lesson Plan|Classroom Activities|Homework|Assessment Questions|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন|INFORMATION|তথ্য)/i).filter(s => s.trim().length > 5);
+
+      return sections.map((section, idx) => {
+          const rawTitleMatch = section.match(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i);
+          const rawParsedTitle = rawTitleMatch ? rawTitleMatch[1] : (idx === 0 ? "General Content" : `Part ${idx + 1}`);
+
+          const tl = rawParsedTitle.toLowerCase();
+          let category = 'general';
+          if (tl.includes('lesson') || tl.includes('পাঠ')) category = 'lesson';
+          else if (tl.includes('activ') || tl.includes('শ্ৰেণ')) category = 'activity';
+          else if (tl.includes('home') || tl.includes('গৃহ')) category = 'homework';
+          else if (tl.includes('assess') || tl.includes('মূল্যা')) category = 'assessment';
+
+          let finalTitle = rawParsedTitle;
+          if (language === 'Assamese') {
+              if (category === 'general') finalTitle = 'General Content (তথ্য)';
+              else if (category === 'lesson') finalTitle = 'Lesson Plan (পাঠ পৰিকল্পনা)';
+              else if (category === 'activity') finalTitle = 'Classroom Activities (শ্ৰেণীকক্ষৰ কাৰ্যসূচী)';
+              else if (category === 'homework') finalTitle = 'Homework (গৃহকাৰ্য)';
+              else if (category === 'assessment') finalTitle = 'Assessmenrt Questions (মূল্যায়নৰ প্ৰশ্ন)';
+          } else {
+              if (category === 'general') finalTitle = 'General Content';
+              else if (category === 'lesson') finalTitle = 'Lesson Plan';
+              else if (category === 'activity') finalTitle = 'Classroom Activities';
+              else if (category === 'homework') finalTitle = 'Homework';
+              else if (category === 'assessment') finalTitle = 'Assessmenrt Questions';
+          }
+
+          let body = section.replace(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|Assessmenrt Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i, '');
+          body = body.replace(/---/g, '').replace(/\*/g, '').replace(/\.\./g, '').trim().replace(/^[\s:)*-]+/, '').replace(/[\s:(*-]+$/, '').trim();
+          if (!body && idx > 0) return null;
+
+          return (
+              <div key={idx} className="mb-12 page-break-inside-avoid">
+                  <div className="flex items-center gap-4 mb-6">
+                      <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-pm-green border border-green-100">
+                         <Library className="w-5 h-5" />
+                      </div>
+                      <h3 className="text-xl font-black text-gray-900 border-b-2 border-pm-green/20 pb-1">{finalTitle}</h3>
+                  </div>
+                  <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-sm bg-gray-50/30 p-8 rounded-2xl border border-gray-100 font-medium leading-8">
+                      {body}
+                  </div>
+              </div>
+          );
+      }).filter(Boolean);
+  };
+
   const handlePrint = (overrideData = null) => {
     const data = overrideData || printData;
     if (!data) return;
@@ -149,7 +199,6 @@ const AdminDashboard = ({ user, onLogout }) => {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       setPrintData(response.data);
-      // Wait for React to render the printable hidden div if needed, then print
       setTimeout(() => {
         handlePrint(response.data);
         setPrintData(null);
@@ -535,15 +584,9 @@ const AdminDashboard = ({ user, onLogout }) => {
                       </div>
                   </div>
                   
-                  <div 
-                    className="prose prose-sm max-w-none text-gray-800 leading-relaxed font-medium"
-                    dangerouslySetInnerHTML={{ 
-                        __html: printData.content
-                            .replace(/---/g, '<hr class="my-8 border-gray-100"/>')
-                            .replace(/\n\n/g, '<br/><br/>')
-                            .replace(/\n/g, '<br/>')
-                    }} 
-                  />
+                  <div className="space-y-12">
+                      {renderDocumentSectionsPrint(printData.content, printData.language)}
+                  </div>
                   
                   <div className="mt-20 pt-8 border-t border-gray-100 flex justify-between items-center opacity-30">
                       <p className="text-[10px] font-black uppercase tracking-widest">© 2026 PaathSohayok Official Record</p>
