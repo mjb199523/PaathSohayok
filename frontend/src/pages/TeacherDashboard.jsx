@@ -274,10 +274,11 @@ const TeacherDashboard = ({ user, onLogout }) => {
       }
     } catch (err) {
       console.error('Generation failure:', err);
-      alert(err.message || 'Generation failed. Please try again.');
+      const errMsg = err.message || 'Generation failed. Please try again.';
+      alert(errMsg);
       // If rate limited, lock the button
-      if (err.message.toLowerCase().includes('wait') || err.message.toLowerCase().includes('quota')) {
-          setLockExpiry(Date.now() + 60000); 
+      if (errMsg.toLowerCase().includes('wait') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('limit')) {
+          setLockExpiry(Date.now() + 65000); // 65 seconds buffer
       }
     } finally {
       setLoading(false);
