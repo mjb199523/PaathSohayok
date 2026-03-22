@@ -36,8 +36,11 @@ router.post('/', verifyToken, async (req, res) => {
       const expiry = activeCooldowns.get(userId);
       if (Date.now() < expiry) {
           const wait = Math.ceil((expiry - Date.now()) / 1000);
+          const minutes = Math.floor(wait / 60);
+          const seconds = wait % 60;
+          const formattedWait = `${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
           return res.status(429).json({ 
-              error: `⌛ Wait ${wait}s for 100% success.`,
+              error: `⌛ Wait ${formattedWait} for 100% success.`,
               retryAfter: wait
           });
       }
@@ -110,10 +113,11 @@ Assessment Questions:
     // Clean up Gemini Quota Errors
     if (userMessage.includes('429') || userMessage.includes('quota')) {
         const resetDate = getNextMidnightPT();
-        const timeStr = resetDate.toLocaleTimeString('en-US', { 
+        const timeStr = resetDate.toLocaleTimeString('en-IN', { 
             hour: '2-digit', 
             minute: '2-digit', 
             hour12: true,
+            timeZone: 'Asia/Kolkata',
             timeZoneName: 'short'
         });
         userMessage = `⚠️ Daily AI Limit Exceeded. Please try again after midnight (${timeStr}).`;

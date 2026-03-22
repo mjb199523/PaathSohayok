@@ -512,9 +512,9 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                                 <div className="text-[14px] font-black text-white tracking-widest">
                                                     READY AT {new Date(lockExpiry).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                                 </div>
-                                                <div className="text-[10px] font-bold text-white/60 uppercase tracking-[0.3em]">
-                                                    Wait {Math.ceil((lockExpiry - currentTime) / 1000)}s
-                                                </div>
+                                                 <div className="text-[10px] font-bold text-white/60 uppercase tracking-[0.3em]">
+                                                     Wait {Math.floor((lockExpiry - currentTime) / 60000)}m {Math.floor(((lockExpiry - currentTime) % 60000) / 1000)}s
+                                                 </div>
                                             </div>
                                         </div>
                                     ) : (
