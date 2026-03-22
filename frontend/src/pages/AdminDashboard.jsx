@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, UserPlus, Trash2, Edit2, ShieldAlert, Users, Mail, Lock, User, CheckCircle2, LayoutDashboard, Settings, HelpCircle, X, Search, ChevronRight, FileText, DownloadCloud, Loader2, Library } from 'lucide-react';
+import { LogOut, UserPlus, Trash2, Edit2, ShieldAlert, Users, Mail, Lock, User, CheckCircle2, LayoutDashboard, Settings, HelpCircle, X, Search, ChevronRight, FileText, DownloadCloud, Loader2, Library, Sparkles, BookOpen, ClipboardList, PenTool, CheckSquare, Download } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config';
 
@@ -19,6 +19,8 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [creationsPage, setCreationsPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
   const [stats, setStats] = useState({ total_creations: 0, pdf_downloads: 0 });
+  const [printData, setPrintData] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   useEffect(() => {
     setUsersPage(1);
@@ -87,6 +89,95 @@ const AdminDashboard = ({ user, onLogout }) => {
     } catch (err) {
       alert('Failed to delete creation globally');
     }
+  };
+
+  const renderDocumentSections = (resultStr, language, forPrint = false) => {
+      if (typeof resultStr !== 'string') return null;
+      const sections = resultStr.split(/(?=Lesson Plan|Classroom Activities|Homework|Assessment Questions|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন|INFORMATION|তথ্য)/i).filter(s => s.trim().length > 5);
+
+      return sections.map((section, idx) => {
+          const rawTitleMatch = section.match(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i);
+          const rawParsedTitle = rawTitleMatch ? rawTitleMatch[1] : (idx === 0 ? "Information Detail" : `Part ${idx + 1}`);
+
+          const tl = rawParsedTitle.toLowerCase();
+          let category = 'general';
+          if (tl.includes('lesson') || tl.includes('পাঠ')) category = 'lesson';
+          else if (tl.includes('activ') || tl.includes('শ্ৰেণ')) category = 'activity';
+          else if (tl.includes('home') || tl.includes('গৃহ')) category = 'homework';
+          else if (tl.includes('assess') || tl.includes('মূল্যা')) category = 'assessment';
+
+          let finalTitle = rawParsedTitle;
+          if (language === 'Assamese') {
+              if (category === 'general') finalTitle = 'Information (তথ্য)';
+              else if (category === 'lesson') finalTitle = 'Lesson Plan (পাঠ পৰিকল্পনা)';
+              else if (category === 'activity') finalTitle = 'Classroom Activities (শ্ৰেণীকক্ষৰ কাৰ্যসূচী)';
+              else if (category === 'homework') finalTitle = 'Homework (গৃহকাৰ্য)';
+              else if (category === 'assessment') finalTitle = 'Assessment Questions (মূল্যায়নৰ প্ৰশ্ন)';
+          } else {
+              if (category === 'general') finalTitle = 'Information Detail';
+              else if (category === 'lesson') finalTitle = 'Lesson Plan';
+              else if (category === 'activity') finalTitle = 'Classroom Activities';
+              else if (category === 'homework') finalTitle = 'Homework';
+              else if (category === 'assessment') finalTitle = 'Assessment Questions';
+          }
+
+          let body = section.replace(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i, '');
+          body = body.replace(/---/g, '').replace(/\*/g, '').replace(/\.\./g, '').trim().replace(/^[\s:)*-]+/, '').replace(/[\s:(*-]+$/, '').trim();
+          if (!body && idx > 0) return null;
+
+          const iconMap = {
+              'general': <Sparkles className="w-5 h-5" />,
+              'lesson': <BookOpen className="w-5 h-5" />,
+              'activity': <ClipboardList className="w-5 h-5" />,
+              'homework': <PenTool className="w-5 h-5" />,
+              'assessment': <CheckSquare className="w-5 h-5" />
+          };
+
+          return (
+              <div key={idx} className="group page-break-inside-avoid">
+                  <div className="flex items-center gap-4 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-pm-green border border-green-100">
+                          {iconMap[category] || <Sparkles className="w-4 h-4" />}
+                      </div>
+                      <h3 className="text-xl font-bold font-heading text-gray-900 border-b-2 border-pm-green/10 pb-1">{finalTitle}</h3>
+                  </div>
+                  <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-sm bg-gray-50/30 p-6 rounded-2xl border border-gray-100 font-medium mb-8">
+                      {body}
+                  </div>
+              </div>
+          );
+      }).filter(Boolean);
+  };
+
+  const handlePrint = (item) => {
+    const originalTitle = document.title;
+    const now = new Date();
+    const dateStr = `${now.getDate().toString().padStart(2, '0')}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getFullYear()}`;
+    
+    const cleanSubject = (item.subject || 'material').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const cleanClass = (item.class || '0').toString().replace(/[^a-z0-9]/g, '_');
+    
+    document.title = `${dateStr}_class_${cleanClass}_${cleanSubject}`;
+    window.print();
+    document.title = originalTitle;
+  };
+
+  const handleDownloadGlobal = async (item) => {
+      try {
+          setDownloadingId(item.id);
+          const response = await axios.get(`${API_URL}/api/creations/get/${item.id}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
+          });
+          setPrintData(response.data);
+          setTimeout(() => {
+              handlePrint(response.data);
+              setPrintData(null);
+          }, 500);
+      } catch (err) {
+          alert("Failed to retrieve archived content.");
+      } finally {
+          setDownloadingId(null);
+      }
   };
 
   const handleAddUser = async (e) => {
@@ -392,14 +483,24 @@ const AdminDashboard = ({ user, onLogout }) => {
                                                     {new Date(c.created_at).toLocaleDateString()} <br/>
                                                     {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                                                 </td>
-                                                <td className="px-6 py-4 text-right pr-12 transition-opacity">
-                                                    <button 
-                                                        onClick={() => deleteCreation(c.id)}
-                                                        className="p-2.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-                                                        title="Delete Global Record"
-                                                    >
-                                                        <Trash2 className="w-5 h-5 flex-shrink-0" />
-                                                    </button>
+                                                <td className="px-6 py-4 text-right pr-12 transition-opacity whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-3">
+                                                        <button 
+                                                            onClick={() => handleDownloadGlobal(c)}
+                                                            disabled={downloadingId === c.id}
+                                                            className="p-2.5 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100/50 disabled:opacity-50"
+                                                            title="Download File PDF"
+                                                        >
+                                                            {downloadingId === c.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => deleteCreation(c.id)}
+                                                            className="p-2.5 text-rose-500 bg-rose-50/50 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-sm border border-rose-100/50"
+                                                            title="Delete Global Record"
+                                                        >
+                                                            <Trash2 className="w-5 h-5 flex-shrink-0" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -477,6 +578,28 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
         )}
       </AnimatePresence>
+
+      {/* Hidden Print Overlay */}
+      {printData && (
+          <div className="hidden print:block absolute top-0 left-0 w-full min-h-screen bg-white z-[99999] p-12">
+              <div className="border-b-2 border-pm-green/30 pb-8 mb-10 overflow-hidden relative">
+                  <div className="flex justify-between items-end relative z-10">
+                      <div>
+                          <h1 className="text-2xl font-black font-heading text-pm-green mb-1 uppercase tracking-tight">{printData.subject} - {printData.topic}</h1>
+                          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest leading-none">Standard {printData.class} • {printData.language} Medium</p>
+                      </div>
+                      <div className="text-right">
+                          <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">PaathSohayok AI</p>
+                          <p className="text-[10px] text-gray-300 font-bold">{new Date().toLocaleDateString('en-IN')}</p>
+                      </div>
+                  </div>
+              </div>
+
+              <div className="space-y-12">
+                  {renderDocumentSections(printData.content, printData.language, true)}
+              </div>
+          </div>
+      )}
     </div>
   );
 };
