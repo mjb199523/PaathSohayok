@@ -60,13 +60,31 @@ router.post('/', verifyToken, async (req, res) => {
 
     const prompt = `You are an expert teacher.
 IMPORTANT: Respond ONLY in the ${language} language.
-Generate structured teaching content for Class ${className}, Subject ${subject}, Topic ${topic}, Sub-topic ${subTopic}.
-Format:
-Information: [Context]
-Lesson Plan: [Flow]
-Classroom Activities: [Engagement]
-Homework: [Practice]
-Assessment Questions: [Questions with Answers]`;
+Generate structured teaching content for:
+Class: ${className}
+Subject: ${subject}
+Topic: ${topic}
+Sub-topic: ${subTopic}
+
+Format your response EXACTLY with these headings:
+
+Information:
+Topic: ${topic}
+Sub-topic: ${subTopic}
+Target Grade Level: Class ${className}
+Duration: 45-50 minutes
+
+Lesson Plan:
+(Must start directly with Learning Objectives)
+
+Classroom Activities:
+[Engagement activities for students]
+
+Homework:
+[Practice assignments]
+
+Assessment Questions:
+[Questions with Answers]`;
 
     const result = await model.generateContentStream(prompt);
     

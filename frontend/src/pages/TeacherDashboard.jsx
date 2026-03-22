@@ -166,7 +166,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
       return sections.map((section, idx) => {
           const rawTitleMatch = section.match(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i);
-          const rawParsedTitle = rawTitleMatch ? rawTitleMatch[1] : (idx === 0 ? "General Content" : `Part ${idx + 1}`);
+          const rawParsedTitle = rawTitleMatch ? rawTitleMatch[1] : (idx === 0 ? "Information Detail" : `Part ${idx + 1}`);
 
           const tl = rawParsedTitle.toLowerCase();
           let category = 'general';
@@ -177,20 +177,20 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
           let finalTitle = rawParsedTitle;
           if (language === 'Assamese') {
-              if (category === 'general') finalTitle = 'General Content (তথ্য)';
+              if (category === 'general') finalTitle = 'Information (তথ্য)';
               else if (category === 'lesson') finalTitle = 'Lesson Plan (পাঠ পৰিকল্পনা)';
               else if (category === 'activity') finalTitle = 'Classroom Activities (শ্ৰেণীকক্ষৰ কাৰ্যসূচী)';
               else if (category === 'homework') finalTitle = 'Homework (গৃহকাৰ্য)';
-              else if (category === 'assessment') finalTitle = 'Assessmenrt Questions (মূল্যায়নৰ প্ৰশ্ন)';
+              else if (category === 'assessment') finalTitle = 'Assessment Questions (মূল্যায়নৰ প্ৰশ্ন)';
           } else {
-              if (category === 'general') finalTitle = 'General Content';
+              if (category === 'general') finalTitle = 'Information Detail';
               else if (category === 'lesson') finalTitle = 'Lesson Plan';
               else if (category === 'activity') finalTitle = 'Classroom Activities';
               else if (category === 'homework') finalTitle = 'Homework';
-              else if (category === 'assessment') finalTitle = 'Assessmenrt Questions';
+              else if (category === 'assessment') finalTitle = 'Assessment Questions';
           }
 
-          let body = section.replace(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|Assessmenrt Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i, '');
+          let body = section.replace(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i, '');
           body = body.replace(/---/g, '').replace(/\*/g, '').replace(/\.\./g, '').trim().replace(/^[\s:)*-]+/, '').replace(/[\s:(*-]+$/, '').trim();
           if (!body && idx > 0) return null;
 
