@@ -7,8 +7,9 @@ function getNextMidnightPT() {
     // 12:30 PM IST is 07:00 AM UTC
     let target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7, 0, 0, 0));
     
-    // If it's already past 7AM UTC today, we need tomorrow's 7AM UTC
-    if (now >= target) {
+    // If it's already past 7AM UTC today (which it always is at midnight IST), 
+    // we MUST target tomorrow's 7AM UTC
+    if (now.getTime() >= target.getTime()) {
         target.setUTCDate(target.getUTCDate() + 1);
     }
     
