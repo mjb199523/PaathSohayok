@@ -39,10 +39,12 @@ router.post('/', verifyToken, async (req, res) => {
           const minutes = Math.floor(wait / 60);
           const seconds = wait % 60;
           const formattedWait = `${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+          const resAt = expiry;
           return res.status(429).json({ 
               error: `⌛ Wait ${formattedWait} for 100% success.`,
               retryAfter: wait,
-              quotaReset: false
+              quotaReset: false,
+              resetAt: resAt
           });
       }
       activeCooldowns.delete(userId);
@@ -108,13 +110,14 @@ Assessment Questions:
 
   } catch (error) {
     console.error('Streaming Error:', error);
+    const resetDateVal = getNextMidnightPT();
+    const resetAtTime = resetDateVal.getTime();
     
     let userMessage = error.message || 'Generation Interrupted';
     
     // Clean up Gemini Quota Errors
     if (userMessage.includes('429') || userMessage.includes('quota')) {
-        const resetDate = getNextMidnightPT();
-        const timeStr = resetDate.toLocaleTimeString('en-IN', { 
+        const timeStr = resetDateVal.toLocaleTimeString('en-IN', { 
             hour: '2-digit', 
             minute: '2-digit', 
             hour12: true,
@@ -127,13 +130,13 @@ Assessment Questions:
       res.status(500).json({ 
           error: userMessage, 
           quotaReset: userMessage.includes('Limit Exceeded'),
-          resetAt: getNextMidnightPT().getTime()
+          resetAt: resetAtTime
       });
     } else {
       res.write(`data: ${JSON.stringify({ 
           error: userMessage, 
           quotaReset: userMessage.includes('Limit Exceeded'),
-          resetAt: getNextMidnightPT().getTime()
+          resetAt: resetAtTime
       })}\n\n`);
       res.end();
     }
