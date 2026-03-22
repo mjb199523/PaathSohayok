@@ -240,8 +240,14 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
       if (!response.ok) {
           const errData = await response.json();
-          if (errData.resetAt) setLockExpiry(errData.resetAt);
-          else setLockExpiry(Date.now() + 65000);
+          if (errData.resetAt) {
+              setLockExpiry(errData.resetAt);
+              localStorage.setItem('pm_lock_expiry', errData.resetAt.toString());
+          } else {
+              const fallback = Date.now() + 65000;
+              setLockExpiry(fallback);
+              localStorage.setItem('pm_lock_expiry', fallback.toString());
+          }
           throw new Error(errData.error || 'Generation failed');
       }
 
@@ -266,7 +272,10 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 accumulatedContent += parsed.chunk;
                 setResult(accumulatedContent);
               } else if (parsed.error) {
-                if (parsed.resetAt) setLockExpiry(parsed.resetAt);
+                if (parsed.resetAt) {
+                    setLockExpiry(parsed.resetAt);
+                    localStorage.setItem('pm_lock_expiry', parsed.resetAt.toString());
+                }
                 throw new Error(parsed.error);
               }
             } catch (e) {
@@ -279,9 +288,11 @@ const TeacherDashboard = ({ user, onLogout }) => {
       console.error('Generation failure:', err);
       const errMsg = err.message || 'Generation failed. Please try again.';
       alert(errMsg);
-      // Fallback lock if not already set by more specific error data
-      if (!lockExpiry && (errMsg.toLowerCase().includes('wait') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('limit'))) {
-          setLockExpiry(Date.now() + 65000); 
+      // Fallback lock ONLY if no specific resetAt was provided by backend
+      if (!err.resetAt && !lockExpiry && (errMsg.toLowerCase().includes('wait') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('limit'))) {
+          const newExpiry = Date.now() + 65000;
+          setLockExpiry(newExpiry);
+          localStorage.setItem('pm_lock_expiry', newExpiry.toString());
       }
     } finally {
       setLoading(false);
@@ -517,7 +528,14 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                                     READY AT {new Date(lockExpiry).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                                 </div>
                                                  <div className="text-[10px] font-bold text-white/60 uppercase tracking-[0.3em]">
-                                                     Wait {Math.floor((lockExpiry - currentTime) / 60000)}m {Math.floor(((lockExpiry - currentTime) % 60000) / 1000)}s
+                                                     Wait {(() => {
+                                                         const diff = lockExpiry - currentTime;
+                                                         const hours = Math.floor(diff / 3600000);
+                                                         const mins = Math.floor((diff % 3600000) / 60000);
+                                                         const secs = Math.floor((diff % 60000) / 1000);
+                                                         if (hours > 0) return `${hours}h ${mins}m`;
+                                                         return `${mins}m ${secs}s`;
+                                                     })()}
                                                  </div>
                                             </div>
                                         </div>
