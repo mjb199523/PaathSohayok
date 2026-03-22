@@ -47,12 +47,12 @@ const TeacherDashboard = ({ user, onLogout }) => {
   }, [activeTab]);
 
   useEffect(() => {
-    if (result && !resetTimer && contentRef.current) {
+    if (!loading && result && !resetTimer && contentRef.current) {
         setTimeout(() => {
             contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
+        }, 300);
     }
-  }, [result, resetTimer]);
+  }, [loading, result, resetTimer]);
 
   const fetchHistory = async () => {
     try {
