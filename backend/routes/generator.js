@@ -41,7 +41,8 @@ router.post('/', verifyToken, async (req, res) => {
           const formattedWait = `${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
           return res.status(429).json({ 
               error: `⌛ Wait ${formattedWait} for 100% success.`,
-              retryAfter: wait
+              retryAfter: wait,
+              quotaReset: false
           });
       }
       activeCooldowns.delete(userId);
@@ -124,9 +125,17 @@ Assessment Questions:
     }
 
     if (!res.headersSent) {
-      res.status(500).json({ error: userMessage });
+      res.status(500).json({ 
+          error: userMessage, 
+          quotaReset: userMessage.includes('Limit Exceeded'),
+          resetAt: getNextMidnightPT().getTime()
+      });
     } else {
-      res.write(`data: ${JSON.stringify({ error: userMessage })}\n\n`);
+      res.write(`data: ${JSON.stringify({ 
+          error: userMessage, 
+          quotaReset: userMessage.includes('Limit Exceeded'),
+          resetAt: getNextMidnightPT().getTime()
+      })}\n\n`);
       res.end();
     }
   }

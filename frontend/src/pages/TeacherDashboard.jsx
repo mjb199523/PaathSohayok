@@ -240,6 +240,8 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
       if (!response.ok) {
           const errData = await response.json();
+          if (errData.resetAt) setLockExpiry(errData.resetAt);
+          else setLockExpiry(Date.now() + 65000);
           throw new Error(errData.error || 'Generation failed');
       }
 
@@ -264,6 +266,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 accumulatedContent += parsed.chunk;
                 setResult(accumulatedContent);
               } else if (parsed.error) {
+                if (parsed.resetAt) setLockExpiry(parsed.resetAt);
                 throw new Error(parsed.error);
               }
             } catch (e) {
@@ -276,9 +279,9 @@ const TeacherDashboard = ({ user, onLogout }) => {
       console.error('Generation failure:', err);
       const errMsg = err.message || 'Generation failed. Please try again.';
       alert(errMsg);
-      // If rate limited, lock the button
-      if (errMsg.toLowerCase().includes('wait') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('limit')) {
-          setLockExpiry(Date.now() + 65000); // 65 seconds buffer
+      // Fallback lock if not already set by more specific error data
+      if (!lockExpiry && (errMsg.toLowerCase().includes('wait') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('limit'))) {
+          setLockExpiry(Date.now() + 65000); 
       }
     } finally {
       setLoading(false);
