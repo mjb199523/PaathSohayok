@@ -4,19 +4,16 @@ const { verifyToken } = require('../middleware/auth');
 
 function getNextMidnightPT() {
     const now = new Date();
-    // Start from "now" in PT
-    const ptStr = now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
-    const ptDate = new Date(ptStr);
+    // 12:00 AM PT is 08:00 AM UTC (outside of DST it's 07:00, but 08:00 covers midnight reliably)
+    // Let's target 08:00 UTC tomorrow
+    let target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 8, 0, 0, 0));
     
-    // Create "tomorrow" in PT
-    const tomorrowPT = new Date(ptDate);
-    tomorrowPT.setDate(tomorrowPT.getDate() + 1);
-    tomorrowPT.setHours(0, 0, 0, 0);
+    // If it's already past 8AM UTC today, we need tomorrow's 8AM UTC
+    if (now >= target) {
+        target.setUTCDate(target.getUTCDate() + 1);
+    }
     
-    // Convert that PT "tomorrow 00:00" back to a global timestamp
-    // We do this by calculating the offset difference
-    const diff = tomorrowPT.getTime() - ptDate.getTime();
-    return new Date(now.getTime() + diff);
+    return target;
 }
 
 // Backend Memory Lock to prevent early hits from resetting Gemini quota
