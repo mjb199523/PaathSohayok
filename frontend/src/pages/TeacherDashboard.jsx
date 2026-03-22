@@ -26,6 +26,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [resetTimer, setResetTimer] = useState(false);
   const [printData, setPrintData] = useState(null);
+  const [historyDownloadingId, setHistoryDownloadingId] = useState(null);
   const contentRef = useRef();
 
   useEffect(() => {
@@ -322,7 +323,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
   const handleDownloadFromHistory = async (item) => {
       try {
-          setLoading(true);
+          setHistoryDownloadingId(item.id);
           // Fetch full content only when needed
           const response = await axios.get(`${API_URL}/api/creations/get/${item.id}`, {
               headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
@@ -335,7 +336,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
       } catch (err) {
           alert("Failed to retrieve archived content for PDF Generation.");
       } finally {
-          setLoading(false);
+          setHistoryDownloadingId(null);
       }
   };
 
@@ -661,6 +662,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                     <tr>
                                         <th className="px-6 py-4">Resource Details</th>
                                         <th className="px-6 py-4">Class / Subject</th>
+                                        <th className="px-6 py-4 text-center">Language</th>
                                         <th className="px-6 py-4">Generation Date</th>
                                         <th className="px-6 py-4 text-right pr-12">Actions</th>
                                     </tr>
@@ -705,6 +707,11 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                                         <p className="text-sm font-medium text-gray-600">{item.subject}</p>
                                                     </div>
                                                 </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${item.language === 'Assamese' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                                        {item.language || 'English'}
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-4">
                                                     <div className="text-[11px] text-gray-400 font-bold whitespace-pre-wrap uppercase leading-normal">
                                                         {new Date(item.created_at).toLocaleDateString()} <br/>
@@ -715,10 +722,11 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                                     <div className="flex items-center justify-end gap-3 transition-opacity">
                                                         <button 
                                                             onClick={() => handleDownloadFromHistory(item)}
-                                                            className="p-2.5 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100/50"
+                                                            disabled={historyDownloadingId === item.id}
+                                                            className="p-2.5 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100/50 disabled:opacity-50"
                                                             title="Download PDF"
                                                         >
-                                                            <Download className="w-4 h-4" />
+                                                            {historyDownloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                                                         </button>
                                                         <button 
                                                             onClick={() => deleteFromHistory(item.id)}
