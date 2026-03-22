@@ -4,11 +4,10 @@ const { verifyToken } = require('../middleware/auth');
 
 function getNextMidnightPT() {
     const now = new Date();
-    // 12:00 AM PT is 08:00 AM UTC (outside of DST it's 07:00, but 08:00 covers midnight reliably)
-    // Let's target 08:00 UTC tomorrow
-    let target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 8, 0, 0, 0));
+    // 12:30 PM IST is 07:00 AM UTC
+    let target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7, 0, 0, 0));
     
-    // If it's already past 8AM UTC today, we need tomorrow's 8AM UTC
+    // If it's already past 7AM UTC today, we need tomorrow's 7AM UTC
     if (now >= target) {
         target.setUTCDate(target.getUTCDate() + 1);
     }
