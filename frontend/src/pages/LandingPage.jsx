@@ -97,12 +97,14 @@ const LandingPage = () => {
       {/* Footer */}
       <footer className="py-12 px-6 bg-pm-gray-50 text-center">
           <div className="max-w-7xl mx-auto">
-              <div className="flex flex-col items-center gap-1 mb-6 opacity-60">
-                    <div className="flex items-center gap-2">
-                        <Library className="w-5 h-5 text-pm-green" />
-                        <span className="font-bold text-gray-900 group-hover:text-pm-green transition-colors">PaathSohayok</span>
+              <div className="flex items-center gap-3 mb-4 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                    <div className="w-8 h-8 bg-pm-green rounded-lg flex items-center justify-center text-white">
+                        <Library className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-bold text-pm-green tracking-[0.2em] uppercase leading-none">পাঠসহায়ক</span>
+                    <div className="flex flex-col items-start">
+                        <span className="font-bold text-base font-heading text-gray-900 leading-none">PaathSohayok</span>
+                        <span className="text-[9px] font-bold text-pm-green tracking-widest uppercase mt-0.5">পাঠসহায়ক</span>
+                    </div>
               </div>
               <p className="text-sm text-gray-400">© 2026 PaathSohayok (পাঠসহায়ক). Empowering education in Assam.</p>
           </div>
