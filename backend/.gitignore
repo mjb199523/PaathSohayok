@@ -7,3 +7,5 @@ gemini_error.txt
 gemini_models_error.txt
 available_models.json
 dist/
+
+.vercel

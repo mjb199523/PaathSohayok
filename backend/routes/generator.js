@@ -2,6 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 
+function getNextMidnightPT() {
+    const now = new Date();
+    let d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), 0, 0, 0));
+    let safety = 0;
+    while (safety < 48) {
+        d.setUTCHours(d.getUTCHours() + 1);
+        const ptHour = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', hourCycle: 'h23' }).format(d);
+        const match = ptHour.match(/\d+/);
+        if (match && parseInt(match[0], 10) === 0) {
+            return d;
+        }
+        safety++;
+    }
+    return new Date(Date.now() + 86400 * 1000);
+}
+
 // Backend Memory Lock to prevent early hits from resetting Gemini quota
 const activeCooldowns = new Map();
 
@@ -68,19 +84,52 @@ Assessment Questions: [Questions with Answers]`
 
     if (!response.ok) {
         if (response.status === 429) {
-            // Force 180s (3 minute) DEFINITIVE wait.
-            const waitSecs = 180; 
-            const expiry = Date.now() + (waitSecs * 1000);
-            activeCooldowns.set(userId, expiry);
+            const errorMsg = data.error?.message || 'Rate limit exceeded';
+            const lowerMsg = errorMsg.toLowerCase();
+            
+            let isDaily = false;
+            if (lowerMsg.includes('per minute')) {
+                isDaily = false;
+            } else if (lowerMsg.includes('day') || lowerMsg.includes('daily') || lowerMsg.includes('exhausted') || lowerMsg.includes('billing') || lowerMsg.includes('quota')) {
+                isDaily = true;
+            }
+            
+            let nextRefreshDate;
+            let waitSecs = 60; // default
+            
+            // Check Google's explicit retryDelay if provided
+            if (Array.isArray(data.error?.details)) {
+                for (const detail of data.error.details) {
+                    if (detail.retryDelay) {
+                        const num = parseFloat(detail.retryDelay.replace('s', ''));
+                        if (!isNaN(num)) waitSecs = Math.ceil(num) + 2; // +2s safety buffer
+                        break;
+                    }
+                }
+            }
+            
+            if (isDaily) {
+                nextRefreshDate = getNextMidnightPT();
+                waitSecs = Math.ceil((nextRefreshDate.getTime() - Date.now()) / 1000);
+                if (waitSecs <= 0) waitSecs = 86400; // Failsafe
+            } else {
+                nextRefreshDate = new Date(Date.now() + waitSecs * 1000);
+            }
 
-            const refreshTime = new Date(expiry);
-            const timeStr = refreshTime.toLocaleString('en-IN', { 
+            activeCooldowns.set(userId, nextRefreshDate.getTime());
+
+            const timeStr = nextRefreshDate.toLocaleString('en-IN', { 
                 timeZone: 'Asia/Kolkata', 
+                weekday: 'long', month: 'short', day: 'numeric',
                 hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true 
             });
             
+            const detailedError = isDaily 
+                ? `🛑 DAILY RATE LIMIT OR BILLING QUOTA REACHED.\n\nYour limit exactly resets at:\n📅 ${timeStr}\n\nPlease wait until then! (Computed via Google).`
+                : `🛑 AI RATE LIMIT: Exactly ${waitSecs} seconds cooldown applied by Google. Your quota will refresh at ${timeStr}.`;
+
             return res.status(429).json({ 
-                error: `🛑 AI RATE LIMIT: Your quota will definitively refresh at ${timeStr}. \n\nIMPORTANT: I have locked your workstation for 3 minutes to guarantee Google's quota resets correctly. Please wait for the button to turn green.`,
+                error: detailedError,
                 retryAfter: waitSecs
             });
         }

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Lock, LogIn, Library, XCircle, ChevronDown, UserCheck, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 const LoginPage = ({ onLogin }) => {
   const location = useLocation();
@@ -19,14 +20,20 @@ const LoginPage = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const roleName = role === 'admin' ? 'Admin' : 'Teacher';
+    document.title = `${roleName} Login | PaathSohayok`;
+  }, [role]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.post(`${apiURL}/api/auth/login`, {
+      console.log(`[Auth] Attempting login via: ${API_URL}`);
+      
+      const response = await axios.post(`${API_URL}/api/auth/login`, {
         email,
         password,
         role
@@ -45,15 +52,15 @@ const LoginPage = ({ onLogin }) => {
   };
 
   return (
-    <div className="h-screen bg-[#F9FAFB] flex flex-col items-center justify-center p-6 font-inter overflow-hidden">
+    <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center py-12 px-6 font-inter overflow-y-auto">
       {/* Brand Logo Above Card */}
       <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-[#2E7D32] rounded-xl flex items-center justify-center text-white shadow-sm">
-              <Library className="w-6 h-6 border-none" />
+          <div className="w-9 h-9 bg-[#2E7D32] rounded-lg flex items-center justify-center text-white shadow-sm">
+              <Library className="w-5 h-5 border-none" />
           </div>
           <div className="flex flex-col">
               <h2 className="text-2xl font-bold font-heading text-[#111827] leading-none">PaathSohayok</h2>
-              <span className="text-[10px] font-bold text-pm-green tracking-[0.2em] uppercase mt-1">পাঠসহায়ক</span>
+              <span className="text-[10px] block -mt-1 font-semibold text-pm-green tracking-widest uppercase">{"\u09AA\u09BE\u09A0\u09B8\u09B9\u09BE\u09DF\u0995"}</span>
           </div>
       </div>
 
@@ -145,6 +152,10 @@ const LoginPage = ({ onLogin }) => {
             </form>
 
             <div className="mt-5 pt-5 border-t border-gray-100">
+                <p className="text-[10px] text-center text-gray-400 leading-relaxed font-medium mb-3">
+                    By signing in, you agree to our processing of your academic data. 
+                    <br /> This platform is compliant with <b>DPDP Act (2023)</b> standards.
+                </p>
                 <p className="text-xs text-center text-gray-400 leading-relaxed font-semibold">
                     Unauthorized access is prohibited. All activity is logged. <br />
                     Developed by Manashjyoti Barman

@@ -2,20 +2,21 @@ const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+const supabaseKey = (process.env.SUPABASE_ANON_KEY || '').trim();
+const supabaseAdminKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('⚠️ WARNING: Supabase credentials missing from .env. Auth features will not work.');
-}
-
-const supabase = (supabaseUrl && supabaseKey) 
-    ? createClient(supabaseUrl, supabaseKey) 
-    : { auth: { signInWithPassword: () => ({ error: { message: 'Supabase credentials missing' } }) } }; // Dummy
+// Pre-initialize clients
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
+const supabaseAdmin = (supabaseUrl && supabaseAdminKey) ? createClient(supabaseUrl, supabaseAdminKey) : null;
 
 // Login Route
 router.post('/login', async (req, res) => {
   try {
+    if (!supabase || !supabaseAdmin) {
+       return res.status(500).json({ error: 'Supabase client not initialized. Check .env' });
+    }
+
     const { email, password, role } = req.body;
 
     if (!email || !password) {
@@ -31,24 +32,23 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: error.message });
     }
 
-    // Create an admin client to bypass RLS when reading the profile
-    const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-    
-    // Get the user's info from a profiles table
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // Get the user's info using the admin client to bypass RLS
+    const { data: profiles, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('name, role')
       .eq('id', data.user.id)
-      .single();
+      .limit(1);
 
-    if (profileError && profileError.code !== 'PGRST116') {
-      return res.status(500).json({ error: 'Failed to fetch user profile' });
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      return res.status(500).json({ error: 'Failed to access user profiles', details: profileError.message });
     }
 
+    const profile = profiles?.[0];
     const actualRole = profile?.role || 'teacher';
 
     if (role && role !== actualRole) {
-      return res.status(401).json({ error: 'No User found' });
+      return res.status(401).json({ error: 'Role mismatch' });
     }
 
     res.json({
@@ -64,12 +64,6 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error during login' });
   }
-});
-
-// For Admin: Create/Add User
-router.post('/register', async (req, res) => {
-  // Only Admin should be allowed here - but that needs verification
-  // For now let's just implement the logic
 });
 
 module.exports = router;

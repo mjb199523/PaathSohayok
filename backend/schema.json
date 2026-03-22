@@ -1,0 +1,51 @@
+{
+  "id": {
+    "default": "gen_random_uuid()",
+    "description": "Note:\nThis is a Primary Key.<pk/>",
+    "format": "uuid",
+    "type": "string"
+  },
+  "user_id": {
+    "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+    "format": "uuid",
+    "type": "string"
+  },
+  "file_name": {
+    "format": "text",
+    "type": "string"
+  },
+  "content": {
+    "format": "text",
+    "type": "string"
+  },
+  "class": {
+    "format": "text",
+    "type": "string"
+  },
+  "subject": {
+    "format": "text",
+    "type": "string"
+  },
+  "topic": {
+    "format": "text",
+    "type": "string"
+  },
+  "subtopic": {
+    "format": "text",
+    "type": "string"
+  },
+  "language": {
+    "format": "text",
+    "type": "string"
+  },
+  "created_at": {
+    "default": "now()",
+    "format": "timestamp with time zone",
+    "type": "string"
+  },
+  "is_deleted": {
+    "default": false,
+    "format": "boolean",
+    "type": "boolean"
+  }
+}

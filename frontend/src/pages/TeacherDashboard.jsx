@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Sparkles, BookOpen, Presentation, ClipboardList, PenTool, CheckSquare, GraduationCap, Copy, Download, RotateCcw, ChevronDown, CheckCircle, LayoutDashboard, Settings, HelpCircle, History, FileText, Loader2, Trash2, X, Cloud, Save, Timer, Lock } from 'lucide-react';
+import { LogOut, Sparkles, BookOpen, Presentation, ClipboardList, PenTool, CheckSquare, Library, Copy, Download, RotateCcw, ChevronDown, CheckCircle, LayoutDashboard, Settings, HelpCircle, History, FileText, Loader2, Trash2, X, Cloud, Save, Timer, Lock, Search } from 'lucide-react';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 const TeacherDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('generate'); // 'generate', 'history', 'settings'
   const [history, setHistory] = useState([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const [formData, setFormData] = useState({
     className: '',
     subject: '',
@@ -19,17 +22,41 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [resetTimer, setResetTimer] = useState(false);
+  const [printData, setPrintData] = useState(null);
   const contentRef = useRef();
 
   useEffect(() => {
-    if (activeTab === 'history') fetchHistory();
+    setHistoryPage(1);
+    setSearchTerm('');
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      setHistoryPage(1);
+      fetchHistory();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const tabName = activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
+    document.title = `${tabName} - Teacher Dashboard | PaathSohayok`;
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (result && !resetTimer && contentRef.current) {
+        setTimeout(() => {
+            contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+    }
+  }, [result, resetTimer]);
 
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.get(`${apiURL}/api/creations/my`, {
+      const response = await axios.get(`${API_URL}/api/creations/my`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       setHistory(response.data);
@@ -49,8 +76,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
     try {
       setSaving(true);
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      await axios.post(`${apiURL}/api/creations`, {
+      await axios.post(`${API_URL}/api/creations`, {
         userId: user.id,
         fileName: `${formData.subject}_${formData.topic}`,
         content: result,
@@ -62,7 +88,25 @@ const TeacherDashboard = ({ user, onLogout }) => {
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
-      if (manual) alert('Successfully saved to your Creation History!');
+      if (manual) {
+          setIsSaved(true);
+          setResetTimer(true);
+          setResult(null); // Remove file visually
+          
+          // Wait 5 seconds with loader, then refresh
+          setTimeout(() => {
+              setFormData({
+                className: '',
+                subject: '',
+                topic: '',
+                subTopic: '',
+                language: 'English'
+              });
+              setIsSaved(false);
+              setResetTimer(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, 5000);
+      }
     } catch (err) {
       console.error('Failed to save:', err);
       const msg = err.response?.data?.error || 'Database sync failed. Please try again.';
@@ -75,8 +119,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const deleteFromHistory = async (id) => {
     if (!window.confirm('Delete this file permanently?')) return;
     try {
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      await axios.delete(`${apiURL}/api/creations/${id}`, {
+      await axios.delete(`${API_URL}/api/creations/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       setHistory(prev => prev.filter(c => c.id !== id));
@@ -84,6 +127,14 @@ const TeacherDashboard = ({ user, onLogout }) => {
       alert('Failed to delete file');
     }
   };
+
+  const filteredHistory = history.filter(item => 
+      item.file_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      item.topic?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.subject?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const totalHistoryPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
+  const paginatedHistory = filteredHistory.slice((historyPage - 1) * ITEMS_PER_PAGE, historyPage * ITEMS_PER_PAGE);
 
   const [lockExpiry, setLockExpiry] = useState(() => {
     const saved = localStorage.getItem('pm_lock_expiry');
@@ -108,15 +159,74 @@ const TeacherDashboard = ({ user, onLogout }) => {
     return () => clearInterval(timer);
   }, [lockExpiry]);
 
-  const handleGenerate = async (e) => {
-    if (e) e.preventDefault();
+  const renderDocumentSections = (resultStr, language, forPrint = false) => {
+      if (typeof resultStr !== 'string') return null;
+      const sections = resultStr.split(/(?=Lesson Plan|Classroom Activities|Homework|Assessment Questions|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন|INFORMATION|তথ্য)/i).filter(s => s.trim().length > 5);
+
+      return sections.map((section, idx) => {
+          const rawTitleMatch = section.match(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i);
+          const rawParsedTitle = rawTitleMatch ? rawTitleMatch[1] : (idx === 0 ? "General Content" : `Part ${idx + 1}`);
+
+          const tl = rawParsedTitle.toLowerCase();
+          let category = 'general';
+          if (tl.includes('lesson') || tl.includes('পাঠ')) category = 'lesson';
+          else if (tl.includes('activ') || tl.includes('শ্ৰেণ')) category = 'activity';
+          else if (tl.includes('home') || tl.includes('গৃহ')) category = 'homework';
+          else if (tl.includes('assess') || tl.includes('মূল্যা')) category = 'assessment';
+
+          let finalTitle = rawParsedTitle;
+          if (language === 'Assamese') {
+              if (category === 'general') finalTitle = 'General Content (তথ্য)';
+              else if (category === 'lesson') finalTitle = 'Lesson Plan (পাঠ পৰিকল্পনা)';
+              else if (category === 'activity') finalTitle = 'Classroom Activities (শ্ৰেণীকক্ষৰ কাৰ্যসূচী)';
+              else if (category === 'homework') finalTitle = 'Homework (গৃহকাৰ্য)';
+              else if (category === 'assessment') finalTitle = 'Assessmenrt Questions (মূল্যায়নৰ প্ৰশ্ন)';
+          } else {
+              if (category === 'general') finalTitle = 'General Content';
+              else if (category === 'lesson') finalTitle = 'Lesson Plan';
+              else if (category === 'activity') finalTitle = 'Classroom Activities';
+              else if (category === 'homework') finalTitle = 'Homework';
+              else if (category === 'assessment') finalTitle = 'Assessmenrt Questions';
+          }
+
+          let body = section.replace(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|Assessmenrt Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i, '');
+          body = body.replace(/---/g, '').replace(/\*/g, '').replace(/\.\./g, '').trim().replace(/^[\s:)*-]+/, '').replace(/[\s:(*-]+$/, '').trim();
+          if (!body && idx > 0) return null;
+
+          const iconMap = {
+              'general': <Sparkles className="w-5 h-5" />,
+              'lesson': <BookOpen className="w-5 h-5" />,
+              'activity': <ClipboardList className="w-5 h-5" />,
+              'homework': <PenTool className="w-5 h-5" />,
+              'assessment': <CheckSquare className="w-5 h-5" />
+          };
+
+          return (
+              <div key={idx} className="group animate-in slide-in-from-bottom-4 duration-500 stagger-item page-break-inside-avoid" style={{ animationDelay: `${idx * 150}ms` }}>
+                  <div className="flex items-center gap-4 mb-8">
+                      <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-pm-green shadow-sm group-hover:bg-pm-green group-hover:text-white transition-all transform group-hover:scale-110">
+                          {iconMap[category] || <Sparkles className="w-5 h-5" />}
+                      </div>
+                      <h3 className="text-2xl font-black font-heading text-gray-900 border-b-4 border-pm-green/10 pb-1">{finalTitle}</h3>
+                  </div>
+                  <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-sm bg-gray-50/50 p-8 rounded-3xl border border-gray-100 font-medium leading-8 shadow-inner ring-1 ring-gray-100/50">
+                      {body}
+                  </div>
+              </div>
+          );
+      }).filter(Boolean);
+  };
+
+  const handleGenerate = async (e, overrideData = null) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (loading || (lockExpiry && Date.now() < lockExpiry)) return;
     
     setLoading(true);
     setResult(null);
+    setIsSaved(false);
     try {
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.post(`${apiURL}/api/generate`, formData, {
+      const payload = overrideData || formData;
+      const response = await axios.post(`${API_URL}/api/generate`, payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       setResult(response.data.content);
@@ -145,12 +255,11 @@ const TeacherDashboard = ({ user, onLogout }) => {
     navigate('/login');
   };
 
-  const handlePrint = () => {
+  const handlePrint = (item = null) => {
     // Track download event
     const trackDownload = async () => {
       try {
-        const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        await axios.post(`${apiURL}/api/creations/track-download`, null, {
+        await axios.post(`${API_URL}/api/creations/track-download`, null, {
             headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
         });
       } catch (err) { console.warn("Track sync failed"); }
@@ -160,25 +269,37 @@ const TeacherDashboard = ({ user, onLogout }) => {
     const originalTitle = document.title;
     const now = new Date();
     const dateStr = `${now.getDate().toString().padStart(2, '0')}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getFullYear()}`;
-    const cleanSubject = (formData.subject || 'material').toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const cleanClass = (formData.className || '0').toString().replace(/[^a-z0-9]/g, '_');
+    
+    const targetSubject = item ? item.subject : formData.subject;
+    const targetClass = item ? item.class : formData.className;
+    
+    const cleanSubject = (targetSubject || 'material').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const cleanClass = (targetClass || '0').toString().replace(/[^a-z0-9]/g, '_');
     
     document.title = `${dateStr}_class_${cleanClass}_${cleanSubject}`;
     window.print();
     document.title = originalTitle;
   };
 
+  const handleDownloadFromHistory = (item) => {
+      setPrintData(item);
+      setTimeout(() => {
+          handlePrint(item);
+          setPrintData(null);
+      }, 300);
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50 font-inter text-gray-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-20 overflow-y-auto no-print">
+      <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-20 overflow-y-auto print:hidden no-print">
         <div className="p-6 border-b border-gray-100 flex items-center gap-4">
-            <div className="w-10 h-10 bg-pm-green rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-900/10">
-                <GraduationCap className="w-5 h-5 flex-shrink-0" />
+            <div className="w-9 h-9 bg-pm-green rounded-lg flex items-center justify-center text-white shadow-sm">
+                <Library className="w-5 h-5 flex-shrink-0" />
             </div>
             <div className="flex flex-col">
                 <span className="font-bold text-lg font-heading text-gray-900 leading-none">PaathSohayok</span>
-                <span className="text-[10px] font-extrabold text-pm-green tracking-[0.2em] uppercase mt-1">পাঠসহায়ক</span>
+                <span className="text-[10px] block -mt-1 font-semibold text-pm-green tracking-widest uppercase">{"\u09AA\u09BE\u09A0\u09B8\u09B9\u09BE\u09DF\u0995"}</span>
             </div>
         </div>
 
@@ -220,6 +341,10 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 <LogOut className="w-4 h-4" />
                 Sign Out
             </button>
+            <div className="mt-8 pt-5 border-t border-gray-100 flex flex-col items-center">
+                <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em]">PaathSohayok Dev</p>
+                <p className="text-[11px] font-bold text-pm-green/40 mt-1">Manashjyoti Barman</p>
+            </div>
         </div>
       </aside>
 
@@ -301,7 +426,14 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                     <button 
                                         key={lang}
                                         type="button"
-                                        onClick={() => setFormData({...formData, language: lang})}
+                                        onClick={() => {
+                                            const mappedData = { ...formData, language: lang };
+                                            setFormData(mappedData);
+                                            // Auto-generate if enough logic exists
+                                            if (result && mappedData.className && mappedData.subject && mappedData.topic) {
+                                                handleGenerate(null, mappedData);
+                                            }
+                                        }}
                                         className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${formData.language === lang ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                                     >
                                         {lang}
@@ -358,10 +490,23 @@ const TeacherDashboard = ({ user, onLogout }) => {
                             <h4 className="text-xl font-bold font-heading text-gray-900">Drafting Educational Content</h4>
                             <p className="text-gray-500 text-sm mt-3 max-w-xs leading-relaxed">Our educator AI is compiling your resources across multiple categories.</p>
                          </div>
+                    ) : resetTimer ? (
+                         <div className="h-[400px] flex flex-col items-center justify-center text-center animate-in fade-in duration-500">
+                             <div className="mb-6 p-5 bg-pm-green/10 rounded-full border border-pm-green/20 relative">
+                                 <CheckCircle className="w-12 h-12 text-pm-green" />
+                                 <motion.div 
+                                    animate={{ rotate: 360 }}
+                                    transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                                    className="absolute inset-0 rounded-full border-[3px] border-pm-green/30 border-t-pm-green"
+                                 ></motion.div>
+                             </div>
+                             <h4 className="text-2xl font-black font-heading text-gray-900">Resource Saved & Synced!</h4>
+                             <p className="text-gray-500 text-sm mt-3 max-w-xs leading-relaxed font-bold tracking-tight">Preparing standard dashboard for immediate composition iteration...</p>
+                         </div>
                     ) : result ? (
-                        <div className="space-y-8 animate-in fade-in duration-500">
+                        <div ref={contentRef} className="space-y-8 animate-in fade-in duration-500 scroll-mt-6">
                             {/* Resource Header Panel */}
-                            <div className="flex justify-between items-center mb-6 pt-4 border-b border-gray-100 pb-6 no-print">
+                            <div className="flex justify-between items-center mb-6 pt-4 border-b border-gray-100 pb-6 print:hidden no-print">
                                 <h3 className="text-xl font-bold font-heading text-gray-900">Educator's Resource Panel</h3>
                                 <div className="flex gap-4">
                                     <button 
@@ -372,15 +517,15 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                         <span className="text-sm font-bold">Copy Full Content</span>
                                     </button>
                                     <button 
-                                        disabled={saving}
+                                        disabled={saving || isSaved}
                                         onClick={() => saveCreation(true)}
-                                        className="pm-button-secondary py-2 flex items-center gap-2 bg-pm-green/5 text-pm-green border-pm-green/20 hover:bg-pm-green hover:text-white transition-all shadow-sm"
+                                        className={`pm-button-secondary py-2 flex items-center gap-2 transition-all shadow-sm ${isSaved ? 'bg-pm-green text-white border-pm-green' : 'bg-pm-green/5 text-pm-green border-pm-green/20 hover:bg-pm-green hover:text-white'}`}
                                     >
-                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                        <span className="text-sm font-bold">{saving ? 'Syncing...' : 'Save Draft'}</span>
+                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isSaved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                                        <span className="text-sm font-bold">{saving ? 'Syncing...' : isSaved ? 'Saved Draft' : 'Save Draft'}</span>
                                     </button>
                                     <button 
-                                         onClick={handlePrint}
+                                         onClick={() => handlePrint(null)}
                                          className="pm-button-primary bg-indigo-600 hover:bg-indigo-700 py-2 flex items-center gap-2 shadow-lg shadow-indigo-900/10"
                                     >
                                         <Download className="w-4 h-4" />
@@ -390,7 +535,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                             </div>
 
                             {/* Main Document Body */}
-                            <div ref={contentRef} className="pm-card p-12 bg-white shadow-xl ring-1 ring-gray-100 print:shadow-none print:ring-0 transition-standard hover:shadow-2xl">
+                            <div className="pm-card p-12 bg-white shadow-xl ring-1 ring-gray-100 print:shadow-none print:ring-0 transition-standard hover:shadow-2xl">
                                 <div className="border-b-2 border-pm-green/30 pb-8 mb-10 overflow-hidden relative">
                                     <div className="flex justify-between items-end relative z-10">
                                         <div>
@@ -406,40 +551,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                 </div>
 
                                 <div className="space-y-16">
-                                    {(() => {
-                                        if (typeof result !== 'string') return null;
-                                        const sections = result.split(/(?=Lesson Plan|Classroom Activities|Homework|Assessment Questions|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন)/i).filter(s => s.trim().length > 5);
-                                        
-                                        return sections.map((section, idx) => {
-                                            const titleMatch = section.match(/^(Lesson Plan|Classroom Activities|Homework|Assessment Questions|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i);
-                                            const title = titleMatch ? titleMatch[1] : (idx === 0 ? "General Content" : `Part ${idx + 1}`);
-                                            let body = section.replace(/^(Lesson Plan|Classroom Activities|Homework|Assessment Questions|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i, '');
-
-                                            body = body.replace(/---/g, '').replace(/\*/g, '').replace(/\.\./g, '').trim().replace(/^[\s:)*-]+/, '').replace(/[\s:(*-]+$/, '').trim();
-                                            if (!body && idx > 0) return null;
-
-                                            const iconMap = {
-                                                "Lesson Plan": <BookOpen className="w-5 h-5" />, "পাঠ পৰিকল্পনা": <BookOpen className="w-5 h-5" />,
-                                                "Classroom Activities": <ClipboardList className="w-5 h-5" />, "শ্ৰেণীৰ কাৰ্যকলাপ": <ClipboardList className="w-5 h-5" />,
-                                                "Homework": <PenTool className="w-5 h-5" />, "ঘৰৰ কাম": <PenTool className="w-5 h-5" />,
-                                                "Assessment Questions": <CheckSquare className="w-5 h-5" />, "মূল্যায়নৰ প্ৰশ্ন": <CheckSquare className="w-5 h-5" />
-                                            };
-
-                                            return (
-                                                <div key={idx} className="group animate-in slide-in-from-bottom-4 duration-500 stagger-item" style={{ animationDelay: `${idx * 150}ms` }}>
-                                                    <div className="flex items-center gap-4 mb-8">
-                                                        <div className="w-12 h-12 rounded-2xl bg-pm-green/10 flex items-center justify-center text-pm-green shadow-sm group-hover:bg-pm-green group-hover:text-white transition-all transform group-hover:scale-110">
-                                                            {iconMap[title] || <Sparkles className="w-5 h-5" />}
-                                                        </div>
-                                                        <h3 className="text-2xl font-black font-heading text-gray-900 border-b-4 border-pm-green/10 pb-1">{title}</h3>
-                                                    </div>
-                                                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-sm bg-gray-50/50 p-8 rounded-3xl border border-gray-100 font-medium leading-8 shadow-inner ring-1 ring-gray-100/50">
-                                                        {body}
-                                                    </div>
-                                                </div>
-                                            );
-                                        }).filter(Boolean);
-                                    })()}
+                                    {renderDocumentSections(result, formData.language, false)}
                                 </div>
                             </div>
 
@@ -470,70 +582,130 @@ const TeacherDashboard = ({ user, onLogout }) => {
             )}
 
             {activeTab === 'history' && (
-                <div className="no-print">
-                    <header className="mb-10">
-                        <h2 className="text-3xl font-bold font-heading text-gray-900 tracking-tight">Creation History</h2>
-                        <p className="text-gray-500 text-sm mt-1">Review and manage your previously generated teaching materials.</p>
+                <div className="print:hidden no-print">
+                    <header className="mb-10 flex justify-between items-end">
+                       <div>
+                          <h2 className="text-3xl font-bold font-heading text-gray-900 tracking-tight">Creation History</h2>
+                          <p className="text-gray-500 text-sm mt-1">Review, manage and download your previously generated teaching materials.</p>
+                       </div>
                     </header>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {loading ? (
-                            <div className="col-span-full py-20 text-center text-gray-400 animate-pulse">Syncing your records...</div>
-                        ) : history.length === 0 ? (
-                            <div className="col-span-full py-20 text-center pm-card border-dashed border-gray-200">
-                                <History className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                                <h3 className="text-lg font-bold text-gray-500">No History Yet</h3>
-                                <p className="text-sm text-gray-400 mt-1">Your generated materials will appear here automatically.</p>
+                    <div className="pm-card shadow-sm border-gray-100 bg-white overflow-hidden">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/20">
+                            <h3 className="text-lg font-bold font-heading">Archived Resources</h3>
+                            <div className="relative">
+                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input 
+                                    type="text"
+                                    placeholder="Filter your history..."
+                                    className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-pm-green/20 focus:border-pm-green outline-none transition-all w-64"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
-                        ) : history.map((item) => (
-                            <div key={item.id} className="pm-card p-6 bg-white hover:border-pm-green/30 transition-all group relative">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center text-pm-green">
-                                        <FileText className="w-5 h-5 flex-shrink-0" />
-                                    </div>
-                                    <button 
-                                        onClick={() => deleteFromHistory(item.id)}
-                                        className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-                                    >
-                                        <Trash2 className="w-4 h-4 flex-shrink-0" />
-                                    </button>
-                                </div>
-                                <h4 className="font-bold text-gray-900 line-clamp-1 mb-1">{item.file_name}</h4>
-                                <p className="text-[10px] font-bold text-pm-green uppercase tracking-widest mb-4">{item.topic}</p>
-                                
-                                <div className="space-y-2 mb-6 text-xs font-medium text-gray-500">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-200"></div>
-                                        <span>Grade {item.class} • {item.subject}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-200"></div>
-                                        <span className="uppercase tracking-tighter">
-                                            {new Date(item.created_at).toLocaleDateString()} 
-                                            <span className="mx-1.5 text-gray-300">•</span>
-                                            {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                                        </span>
-                                    </div>
-                                </div>
+                        </div>
 
-                                <button 
-                                    onClick={() => {
-                                        setFormData({
-                                            className: item.class,
-                                            subject: item.subject,
-                                            topic: item.topic,
-                                            subTopic: item.subtopic,
-                                            language: item.language
-                                        });
-                                        setResult(item.content);
-                                        setActiveTab('generate');
-                                    }}
-                                    className="w-full py-2.5 text-xs font-bold text-gray-600 bg-gray-50 hover:bg-pm-green hover:text-white rounded-lg transition-all"
-                                >
-                                    Refactor / View Material
-                                </button>
-                            </div>
-                        ))}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-[#F9FAFB] text-gray-500 text-[11px] uppercase tracking-widest font-bold">
+                                    <tr>
+                                        <th className="px-6 py-4">Resource Details</th>
+                                        <th className="px-6 py-4">Class / Subject</th>
+                                        <th className="px-6 py-4">Generation Date</th>
+                                        <th className="px-6 py-4 text-right pr-12">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan="4" className="px-8 py-20 text-center text-gray-400 text-sm">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <Loader2 className="w-8 h-8 animate-spin text-pm-green mb-4" />
+                                                    <span className="font-semibold tracking-wide animate-pulse">Syncing your records...</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : filteredHistory.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" className="px-8 py-20 text-center text-gray-400 text-sm italic">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <History className="w-12 h-12 text-gray-200 mb-4" />
+                                                    <h3 className="text-lg font-bold text-gray-500">No Records Found</h3>
+                                                    <p className="text-sm text-gray-400 mt-1">Try a different search or generate new content to populate history.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        paginatedHistory.map((item, idx) => (
+                                            <tr key={item.id} className={`${idx % 2 === 1 ? 'bg-gray-50/30' : 'bg-white'} hover:bg-green-50/30 transition-colors group cursor-default`}>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center text-pm-green group-hover:bg-pm-green group-hover:text-white transition-all shadow-sm">
+                                                            <FileText className="w-5 h-5 flex-shrink-0" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-gray-900 text-sm leading-tight">{item.file_name || 'Untitled Generation'}</p>
+                                                            <p className="text-[10px] text-pm-green font-bold uppercase mt-1 tracking-tight">{item.topic}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold text-gray-600">GRADE {item.class}</span>
+                                                        <p className="text-sm font-medium text-gray-600">{item.subject}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-[11px] text-gray-400 font-bold whitespace-pre-wrap uppercase leading-normal">
+                                                        {new Date(item.created_at).toLocaleDateString()} <br/>
+                                                        {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right pr-10 whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-3 transition-opacity">
+                                                        <button 
+                                                            onClick={() => handleDownloadFromHistory(item)}
+                                                            className="p-2.5 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100/50"
+                                                            title="Download PDF"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => deleteFromHistory(item.id)}
+                                                            className="p-2.5 text-rose-500 bg-rose-50/50 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-sm border border-rose-100/50"
+                                                            title="Delete Record"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                            {!loading && totalHistoryPages > 1 && (
+                                <div className="flex justify-between items-center px-8 py-4 bg-gray-50/50 border-t border-gray-100">
+                                    <span className="text-sm font-semibold text-gray-500">Page {historyPage} of {totalHistoryPages}</span>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            disabled={historyPage === 1}
+                                            onClick={() => setHistoryPage(p => p - 1)}
+                                            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
+                                        >
+                                            Previous
+                                        </button>
+                                        <button 
+                                            disabled={historyPage === totalHistoryPages}
+                                            onClick={() => setHistoryPage(p => p + 1)}
+                                            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -548,13 +720,34 @@ const TeacherDashboard = ({ user, onLogout }) => {
         </div>
       </main>
 
+      {/* Hidden Print Overlay for direct History Item generation without viewing */}
+      {printData && (
+          <div className="hidden print:block absolute top-0 left-0 w-full min-h-screen bg-white z-[99999] p-12">
+              <div className="border-b-2 border-pm-green/30 pb-8 mb-10 overflow-hidden relative">
+                  <div className="flex justify-between items-end relative z-10">
+                      <div>
+                          <h1 className="text-2xl font-black font-heading text-pm-green mb-1 uppercase tracking-tight">{printData.subject} - {printData.topic}</h1>
+                          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest leading-none">Standard {printData.class} • {printData.language} Medium</p>
+                      </div>
+                      <div className="text-right">
+                          <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">PaathSohayok AI</p>
+                          <p className="text-[10px] text-gray-300 font-bold">{new Date().toLocaleDateString('en-IN')}</p>
+                      </div>
+                  </div>
+              </div>
+
+              <div className="space-y-12">
+                  {renderDocumentSections(printData.content, printData.language, true)}
+              </div>
+          </div>
+      )}
+
       {/* Styles for print */}
       <style>{`
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; }
           .pm-card { border: 1px solid #eee !important; box-shadow: none !important; margin-bottom: 2rem !important; }
-          .flex { display: block !important; }
           main { margin-left: 0 !important; width: 100% !important; }
         }
       `}</style>

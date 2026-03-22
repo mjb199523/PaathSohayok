@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Presentation, ClipboardList, CheckCircle, GraduationCap, ArrowRight, Library, Target, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const LandingPage = () => {
+  useEffect(() => {
+    document.title = "Home | PaathSohayok";
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-inter">
       {/* Sticky Navbar */}
@@ -15,7 +19,7 @@ const LandingPage = () => {
                 </div>
                 <div>
                    <h1 className="text-xl font-bold text-pm-900 tracking-tight font-heading">PaathSohayok</h1>
-                   <span className="text-[10px] block -mt-1 font-semibold text-pm-green tracking-widest uppercase">পাঠসহায়ক</span>
+                   <span className="text-[10px] block -mt-1 font-semibold text-pm-green tracking-widest uppercase">{"\u09AA\u09BE\u09A0\u09B8\u09B9\u09BE\u09DF\u0995"}</span>
                 </div>
             </div>
             <div className="hidden md:flex gap-4">
@@ -23,7 +27,7 @@ const LandingPage = () => {
                  <Link to="/login?role=teacher" className="px-5 py-2 text-sm font-bold bg-[#2E7D32] text-white rounded-lg hover:bg-[#1B5E20] transition-shadow shadow-sm">Teacher Login</Link>
             </div>
             <div className="md:hidden">
-                 <Link to="/login?role=teacher" className="p-2 text-gray-500 hover:text-pm-green"><GraduationCap className="w-6 h-6" /></Link>
+                 <Link to="/login?role=teacher" className="p-2 text-gray-500 hover:text-pm-green"><Library className="w-6 h-6" /></Link>
             </div>
         </div>
       </nav>

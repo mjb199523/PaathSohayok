@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, UserPlus, Trash2, Edit2, ShieldAlert, Users, Mail, Lock, User, CheckCircle2, LayoutDashboard, Settings, HelpCircle, X, Search, ChevronRight, FileText, DownloadCloud } from 'lucide-react';
+import { LogOut, UserPlus, Trash2, Edit2, ShieldAlert, Users, Mail, Lock, User, CheckCircle2, LayoutDashboard, Settings, HelpCircle, X, Search, ChevronRight, FileText, DownloadCloud, Loader2, Library } from 'lucide-react';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('users'); // 'users', 'creations', 'settings'
@@ -14,18 +15,33 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [usersPage, setUsersPage] = useState(1);
+  const [creationsPage, setCreationsPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const [stats, setStats] = useState({ total_creations: 0, pdf_downloads: 0 });
 
   useEffect(() => {
+    setUsersPage(1);
+    setCreationsPage(1);
+    setSearchTerm('');
     fetchUsers();
     fetchCreations();
     fetchStats();
   }, [activeTab]);
 
+  useEffect(() => {
+    setUsersPage(1);
+    setCreationsPage(1);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const tabName = activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
+    document.title = `${tabName} - Admin Dashboard | PaathSohayok`;
+  }, [activeTab]);
+
   const fetchStats = async () => {
     try {
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.get(`${apiURL}/api/creations/stats`, {
+      const response = await axios.get(`${API_URL}/api/creations/stats`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       setStats(response.data);
@@ -35,8 +51,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.get(`${apiURL}/api/admin/users`, {
+      const response = await axios.get(`${API_URL}/api/admin/users`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       setUsers(response.data);
@@ -50,8 +65,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const fetchCreations = async () => {
     try {
       setLoading(true);
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.get(`${apiURL}/api/admin/creations`, {
+      const response = await axios.get(`${API_URL}/api/admin/creations`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       setCreations(response.data);
@@ -65,8 +79,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const deleteCreation = async (id) => {
     if (!window.confirm('Are you sure you want to delete this file? This will remove it for both Admin and Teacher permanently.')) return;
     try {
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      await axios.delete(`${apiURL}/api/admin/creations/${id}`, {
+      await axios.delete(`${API_URL}/api/admin/creations/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       // Instant update
@@ -82,14 +95,13 @@ const AdminDashboard = ({ user, onLogout }) => {
     setSuccess('');
     
     try {
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       if (editingUserId) {
-        await axios.put(`${apiURL}/api/admin/users/${editingUserId}`, newUser, {
+        await axios.put(`${API_URL}/api/admin/users/${editingUserId}`, newUser, {
           headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
         });
         setSuccess('User updated successfully!');
       } else {
-        await axios.post(`${apiURL}/api/admin/users`, newUser, {
+        await axios.post(`${API_URL}/api/admin/users`, newUser, {
           headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
         });
         setSuccess('User created successfully!');
@@ -113,8 +125,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const deleteUser = async (id) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      await axios.delete(`${apiURL}/api/admin/users/${id}`, {
+      await axios.delete(`${API_URL}/api/admin/users/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       fetchUsers();
@@ -123,17 +134,28 @@ const AdminDashboard = ({ user, onLogout }) => {
     }
   };
 
+  const filteredUsers = users.filter(u => u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const totalUsersPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const paginatedUsers = filteredUsers.slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE);
+
+  const filteredCreations = creations.filter(c => 
+      c.file_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      c.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const totalCreationsPages = Math.ceil(filteredCreations.length / ITEMS_PER_PAGE);
+  const paginatedCreations = filteredCreations.slice((creationsPage - 1) * ITEMS_PER_PAGE, creationsPage * ITEMS_PER_PAGE);
+
   return (
     <div className="flex min-h-screen bg-gray-50 font-inter text-gray-900">
       {/* Fixed Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-20 overflow-y-auto">
         <div className="p-6 border-b border-gray-100 flex items-center gap-4">
-            <div className="w-10 h-10 bg-pm-green rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-900/10">
-                <ShieldAlert className="w-5 h-5 flex-shrink-0" />
+            <div className="w-9 h-9 bg-pm-green rounded-lg flex items-center justify-center text-white shadow-sm">
+                <Library className="w-5 h-5 flex-shrink-0" />
             </div>
             <div className="flex flex-col">
                 <span className="font-bold text-lg font-heading text-gray-900 leading-none">PaathSohayok</span>
-                <span className="text-[10px] font-extrabold text-pm-green tracking-[0.2em] uppercase mt-1">পাঠসহায়ক</span>
+                <span className="text-[10px] block -mt-1 font-semibold text-pm-green tracking-widest uppercase">{"\u09AA\u09BE\u09A0\u09B8\u09B9\u09BE\u09DF\u0995"}</span>
             </div>
         </div>
 
@@ -242,11 +264,16 @@ const AdminDashboard = ({ user, onLogout }) => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {loading ? (
-                                        <tr><td colSpan="4" className="px-8 py-20 text-center text-gray-400 text-sm animate-pulse">Loading directory...</td></tr>
-                                    ) : users.length === 0 ? (
+                                        <tr><td colSpan="4" className="px-8 py-20 text-center text-gray-400 text-sm">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <Loader2 className="w-8 h-8 animate-spin text-pm-green mb-4" />
+                                                <span className="font-semibold tracking-wide animate-pulse">Loading directory...</span>
+                                            </div>
+                                        </td></tr>
+                                    ) : filteredUsers.length === 0 ? (
                                         <tr><td colSpan="4" className="px-8 py-20 text-center text-gray-400 text-sm italic">No users found. Start by adding a teacher account.</td></tr>
                                     ) : (
-                                        users.filter(u => u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase())).map((u, idx) => (
+                                        paginatedUsers.map((u, idx) => (
                                             <tr key={u.id} className={`${idx % 2 === 1 ? 'bg-gray-50/30' : 'bg-white'} hover:bg-green-50/30 transition-colors group cursor-default`}>
                                                 <td className="px-8 py-5">
                                                     <div className="flex items-center gap-4">
@@ -272,6 +299,27 @@ const AdminDashboard = ({ user, onLogout }) => {
                                     )}
                                 </tbody>
                             </table>
+                            {!loading && totalUsersPages > 1 && (
+                                <div className="flex justify-between items-center px-8 py-4 bg-gray-50/50 border-t border-gray-100">
+                                    <span className="text-sm font-semibold text-gray-500">Page {usersPage} of {totalUsersPages}</span>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            disabled={usersPage === 1}
+                                            onClick={() => setUsersPage(p => p - 1)}
+                                            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            Previous
+                                        </button>
+                                        <button 
+                                            disabled={usersPage === totalUsersPages}
+                                            onClick={() => setUsersPage(p => p + 1)}
+                                            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </>
@@ -313,14 +361,16 @@ const AdminDashboard = ({ user, onLogout }) => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {loading ? (
-                                        <tr><td colSpan="5" className="px-8 py-20 text-center text-gray-400 text-sm">Synchronizing global files...</td></tr>
-                                    ) : creations.length === 0 ? (
+                                        <tr><td colSpan="5" className="px-8 py-20 text-center text-gray-400 text-sm">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <Loader2 className="w-8 h-8 animate-spin text-pm-green mb-4" />
+                                                <span className="font-semibold tracking-wide animate-pulse">Synchronizing global files...</span>
+                                            </div>
+                                        </td></tr>
+                                    ) : filteredCreations.length === 0 ? (
                                         <tr><td colSpan="5" className="px-8 py-20 text-center text-gray-400 text-sm italic">No files found in system records.</td></tr>
                                     ) : (
-                                        creations.filter(c => 
-                                            c.file_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                            c.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-                                        ).map((c, idx) => (
+                                        paginatedCreations.map((c, idx) => (
                                             <tr key={c.id} className={`${idx % 2 === 1 ? 'bg-gray-50/30' : 'bg-white'} hover:bg-green-50/30 transition-colors group`}>
                                                 <td className="px-6 py-4">
                                                     <div>
@@ -356,6 +406,27 @@ const AdminDashboard = ({ user, onLogout }) => {
                                     )}
                                 </tbody>
                             </table>
+                            {!loading && totalCreationsPages > 1 && (
+                                <div className="flex justify-between items-center px-8 py-4 bg-gray-50/50 border-t border-gray-100">
+                                    <span className="text-sm font-semibold text-gray-500">Page {creationsPage} of {totalCreationsPages}</span>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            disabled={creationsPage === 1}
+                                            onClick={() => setCreationsPage(p => p - 1)}
+                                            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            Previous
+                                        </button>
+                                        <button 
+                                            disabled={creationsPage === totalCreationsPages}
+                                            onClick={() => setCreationsPage(p => p + 1)}
+                                            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </>
