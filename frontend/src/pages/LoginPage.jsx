@@ -152,17 +152,6 @@ const LoginPage = ({ onLogin }) => {
             </form>
 
             <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col items-center">
-                {/* Standard Footer Logo */}
-                <div className="flex items-center gap-3 mb-4 opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-                    <div className="w-7 h-7 bg-pm-green rounded-lg flex items-center justify-center text-white">
-                        <Library className="w-4 h-4" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="font-bold text-sm font-heading text-gray-900 leading-none">PaathSohayok</span>
-                        <span className="text-[8px] font-bold text-pm-green tracking-widest uppercase">পাঠসহায়ক</span>
-                    </div>
-                </div>
-                
                 <p className="text-[10px] text-center text-gray-400 leading-relaxed font-medium mb-3">
                     By signing in, you agree to our processing of your academic data. 
                     <br /> This platform is compliant with <b>DPDP Act (2023)</b> standards.
