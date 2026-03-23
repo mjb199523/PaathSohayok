@@ -55,9 +55,14 @@ const LandingPage = () => {
                         Start Generating for Free
                         <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                     </Link>
-                    <button className="pm-button-secondary px-10 py-4 text-base">
+                    <a 
+                        href="/sample_material.pdf" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="pm-button-secondary px-10 py-4 text-base flex items-center justify-center transition-all hover:bg-gray-50 active:scale-95 border border-[#E5E7EB] rounded-lg font-semibold"
+                    >
                         View Sample Materials
-                    </button>
+                    </a>
                 </div>
             </motion.div>
         </div>
