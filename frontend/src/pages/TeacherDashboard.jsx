@@ -163,17 +163,22 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
   const renderDocumentSections = (resultStr, language, forPrint = false) => {
       if (typeof resultStr !== 'string') return null;
-      const sections = resultStr.split(/(?=Lesson Plan|Classroom Activities|Homework|Assessment Questions|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন|INFORMATION|তথ্য)/i).filter(s => s.trim().length > 5);
+      
+      const keywordPattern = "(?:LESSON PLAN|CLASSROOM ACTIVITIES|HOMEWORK|ASSESSMENT QUESTIONS|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|শ্ৰেণীকক্ষৰ কাৰ্যসূচী|গৃহকাৰ্য|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন|INFORMATION|তথ্য)";
+      // Split on major headings, optionally preceded by numbers like "1." 
+      const splitRegex = new RegExp(`(?=\\n?\\s*(?:\\d\\.\\s*)?${keywordPattern})`, 'i');
+      const sections = resultStr.split(splitRegex).filter(s => s.trim().length > 5);
 
       return sections.map((section, idx) => {
-          const rawTitleMatch = section.match(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i);
-          const rawParsedTitle = rawTitleMatch ? rawTitleMatch[1] : (idx === 0 ? "Information Detail" : `Part ${idx + 1}`);
+          // Robust heading identification
+          const headingMatch = section.match(/^(?:\s*(?:\d\.\s*)?)(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|শ্ৰেণীকক্ষৰ কাৰ্যসূচী|গৃহকাৰ্য|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i);
+          const rawParsedTitle = headingMatch ? headingMatch[1].trim() : (idx === 0 ? "Information Detail" : `Part ${idx + 1}`);
 
           const tl = rawParsedTitle.toLowerCase();
           let category = 'general';
           if (tl.includes('lesson') || tl.includes('পাঠ')) category = 'lesson';
           else if (tl.includes('activ') || tl.includes('শ্ৰেণ')) category = 'activity';
-          else if (tl.includes('home') || tl.includes('গৃহ')) category = 'homework';
+          else if (tl.includes('home') || tl.includes('গৃহ') || tl.includes('ঘৰ')) category = 'homework';
           else if (tl.includes('assess') || tl.includes('মূল্যা')) category = 'assessment';
 
           let finalTitle = rawParsedTitle;
@@ -191,7 +196,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
               else if (category === 'assessment') finalTitle = 'Assessment Questions';
           }
 
-          let body = section.replace(/^(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|গৃহকাৰ্য|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i, '');
+          let body = section.replace(/^(?:\s*(?:\d\.\s*)?)(Information|Lesson Plan|Classroom Activities|Homework|Assessment Questions|তথ্য|পাঠ পৰিকল্পনা|শ্ৰেণীৰ কাৰ্যকলাপ|শ্ৰেণীকক্ষৰ কাৰ্যসূচী|গৃহকাৰ্য|ঘৰৰ কাম|মূল্যায়নৰ প্ৰশ্ন|মূল্যায়নৰ প্ৰশ্ন)[:\s*#-]*/i, '');
           body = body.replace(/---/g, '').replace(/\*/g, '').replace(/\.\./g, '').trim().replace(/^[\s:)*-]+/, '').replace(/[\s:(*-]+$/, '').trim();
           if (!body && idx > 0) return null;
 

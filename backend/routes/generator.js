@@ -63,32 +63,26 @@ router.post('/', verifyToken, async (req, res) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `You are an expert teacher.
-IMPORTANT: Respond ONLY in the ${language} language.
+IMPORTANT: Respond ONLY in the ${language}.
 Generate structured teaching content for:
 Class: ${className}
 Subject: ${subject}
 Topic: ${topic}
 Sub-topic: ${subTopic}
 
-Format your response EXACTLY with these headings:
+YOU MUST USE THESE EXACT HEADINGS (DO NOT TRANSLATE THEM):
+1. Information:
+2. Lesson Plan:
+3. Classroom Activities:
+4. Homework:
+5. Assessment Questions:
 
-Information:
-Topic: ${topic}
-Sub-topic: ${subTopic}
-Target Grade Level: Class ${className}
-Duration: 45-50 minutes
-
-Lesson Plan:
-(Must start directly with Learning Objectives)
-
-Classroom Activities:
-[Engagement activities for students]
-
-Homework:
-[Practice assignments]
-
-Assessment Questions:
-[Questions with Answers]`;
+Content Guidelines:
+- Content under each heading must be in ${language}.
+- Ensure the "Homework:" section is concise and appears ONLY ONCE.
+- Do not repeat topics or add any additional headings.
+- Duration for the lesson is 45-50 minutes.
+- The Lesson Plan must start with Learning Objectives.`;
 
     const result = await model.generateContentStream(prompt);
     
