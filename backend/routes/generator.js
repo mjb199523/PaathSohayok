@@ -70,7 +70,10 @@ Subject: ${subject}
 Topic: ${topic}
 Sub-topic: ${subTopic}
 
-YOU MUST USE THESE EXACT HEADINGS (DO NOT TRANSLATE THEM):
+YOU MUST START YOUR RESPONSE DIRECTLY WITH "1. Information:".
+DO NOT INCLUDE ANY INTRODUCTORY TEXT, GREETINGS, OR filler.
+
+HEADINGS TO USE (DO NOT TRANSLATE THEM):
 1. Information:
 2. Lesson Plan:
 3. Classroom Activities:
@@ -79,8 +82,7 @@ YOU MUST USE THESE EXACT HEADINGS (DO NOT TRANSLATE THEM):
 
 Content Guidelines:
 - Content under each heading must be in ${language}.
-- Ensure the "Homework:" section is concise and appears ONLY ONCE.
-- Do not repeat topics or add any additional headings.
+- Ensure each section is concise and appears ONLY ONCE.
 - Duration for the lesson is 45-50 minutes.
 - The Lesson Plan must start with Learning Objectives.`;
 
