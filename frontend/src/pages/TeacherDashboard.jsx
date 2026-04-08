@@ -28,7 +28,8 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [resetTimer, setResetTimer] = useState(false);
   const [printData, setPrintData] = useState(null);
   const [historyDownloadingId, setHistoryDownloadingId] = useState(null);
-  const [profile, setProfile] = useState(user);
+  const [profile, setProfile] = useState(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const contentRef = useRef();
 
   useEffect(() => {
@@ -65,6 +66,8 @@ const TeacherDashboard = ({ user, onLogout }) => {
       setProfile(response.data);
     } catch (err) {
       console.error('Failed to fetch profile');
+    } finally {
+      setProfileLoaded(true);
     }
   };
 
@@ -99,54 +102,57 @@ const TeacherDashboard = ({ user, onLogout }) => {
         className: formData.className,
         subject: formData.subject,
         topic: formData.topic,
-        subtopic: formData.subTopic,
         language: formData.language
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
-      if (manual) {
-          setIsSaved(true);
-          setResetTimer(true);
-          
-          // Wait 3 seconds with loader, then refresh
-          setTimeout(() => {
-              setResult(null); 
-              setFormData({
-                className: '',
-                subject: '',
-                topic: '',
-                subTopic: '',
-                language: 'English'
-              });
-              setIsSaved(false);
-              setResetTimer(false);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-          }, 3000);
-      }
+      
+      setIsSaved(true);
+      if (manual) alert("Content synced to your creation cloud!");
     } catch (err) {
-      console.error('Failed to save:', err);
-      const msg = err.response?.data?.error || 'Database sync failed. Please try again.';
-      alert(`Save Error: ${msg}`);
+      console.error('Failed to save creation');
+      if (manual) alert("Cloud synchronization failed. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
   const deleteFromHistory = async (id) => {
-    if (!window.confirm('Delete this file permanently?')) return;
-    try {
-      await axios.delete(`${API_URL}/api/creations/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
-      });
-      setHistory(prev => prev.filter(c => c.id !== id));
-    } catch (err) {
-      alert('Failed to delete file');
-    }
+      if (!window.confirm("Are you sure you want to remove this resource from your history?")) return;
+      try {
+          await axios.delete(`${API_URL}/api/creations/${id}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
+          });
+          setHistory(prev => prev.filter(item => item.id !== id));
+      } catch (err) {
+          console.error('Failed to delete history item');
+          alert("Failed to delete the resource. Please try again.");
+      }
+  };
+
+  const handleDownloadFromHistory = async (item) => {
+      try {
+          setHistoryDownloadingId(item.id);
+          const response = await axios.get(`${API_URL}/api/creations/${item.id}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
+          });
+          
+          if (response.data && response.data.content) {
+              const fullItem = { ...item, content: response.data.content };
+              handlePrint(fullItem);
+          } else {
+              throw new Error("Content not found");
+          }
+      } catch (err) {
+          console.error('Failed to fetch item for download:', err);
+          alert("Failed to prepare the download. Please try again.");
+      } finally {
+          setHistoryDownloadingId(null);
+      }
   };
 
   const filteredHistory = history.filter(item => 
-      item.file_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      item.topic?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.topic?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       item.subject?.toLowerCase().includes(searchTerm.toLowerCase())
   );
   const totalHistoryPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
@@ -339,42 +345,25 @@ const TeacherDashboard = ({ user, onLogout }) => {
         await axios.post(`${API_URL}/api/creations/track-download`, null, {
             headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
         });
-      } catch (err) { console.warn("Track sync failed"); }
+      } catch (err) {
+        console.error('Download tracking failed');
+      }
     };
     trackDownload();
 
-    const originalTitle = document.title;
-    const now = new Date();
-    const dateStr = `${now.getDate().toString().padStart(2, '0')}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getFullYear()}`;
+    const dataToPrint = item || {
+      subject: formData.subject,
+      topic: formData.topic,
+      class: formData.className,
+      language: formData.language,
+      content: result
+    };
     
-    const targetSubject = item ? item.subject : formData.subject;
-    const targetClass = item ? item.class : formData.className;
-    
-    const cleanSubject = (targetSubject || 'material').toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const cleanClass = (targetClass || '0').toString().replace(/[^a-z0-9]/g, '_');
-    
-    document.title = `${dateStr}_class_${cleanClass}_${cleanSubject}`;
-    window.print();
-    document.title = originalTitle;
-  };
-
-  const handleDownloadFromHistory = async (item) => {
-      try {
-          setHistoryDownloadingId(item.id);
-          // Fetch full content only when needed
-          const response = await axios.get(`${API_URL}/api/creations/get/${item.id}`, {
-              headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
-          });
-          setPrintData(response.data);
-          setTimeout(() => {
-              handlePrint(response.data);
-              setPrintData(null);
-          }, 500);
-      } catch (err) {
-          alert("Failed to retrieve archived content for PDF Generation.");
-      } finally {
-          setHistoryDownloadingId(null);
-      }
+    setPrintData(dataToPrint);
+    setTimeout(() => {
+        window.print();
+        setPrintData(null);
+    }, 500);
   };
 
   return (
@@ -443,386 +432,391 @@ const TeacherDashboard = ({ user, onLogout }) => {
       {/* Main Content Area */}
       <main className="flex-1 ml-64 p-8 print:ml-0 print:p-0">
         <div className="max-w-5xl mx-auto pb-20">
-            {activeTab === 'generate' && (
+            {!profileLoaded ? (
+                <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+                    <div className="relative mb-6">
+                        <div className="w-16 h-16 border-4 border-pm-green/10 rounded-full"></div>
+                        <div className="w-16 h-16 border-4 border-pm-green border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 font-heading">Verifying Educator Quota</h2>
+                    <p className="text-sm text-gray-500 mt-2">Checking your content limit and synchronizing session...</p>
+                </div>
+            ) : (
                 <>
-                <header className="mb-10 no-print">
-                    <h2 className="text-3xl font-bold font-heading text-gray-900 tracking-tight flex items-center gap-3">
-                        Content Studio
-                        <span className="text-xs bg-green-50 text-pm-green px-2 py-0.5 rounded border border-green-100 font-bold tracking-widest uppercase">BETA</span>
-                    </h2>
-                    <p className="text-gray-500 text-sm mt-1">Design high-quality lesson materials with artificial intelligence assistance.</p>
-                </header>
+                    {activeTab === 'generate' && (
+                        <>
+                        <header className="mb-10 no-print">
+                            <h2 className="text-3xl font-bold font-heading text-gray-900 tracking-tight flex items-center gap-3">
+                                Content Studio
+                                <span className="text-xs bg-green-50 text-pm-green px-2 py-0.5 rounded border border-green-100 font-bold tracking-widest uppercase">BETA</span>
+                            </h2>
+                            <p className="text-gray-500 text-sm mt-1">Design high-quality lesson materials with artificial intelligence assistance.</p>
+                        </header>
 
-                <div className="pm-card p-10 shadow-sm border-gray-100 bg-white mb-10 no-print">
-                    <h3 className="text-lg font-bold font-heading mb-8 flex items-center gap-2">
-                        <PenTool className="w-5 h-5 text-pm-green" />
-                        Material Configuration
-                    </h3>
-                    
-                    <form onSubmit={handleGenerate} className="space-y-8">
-                        <div className="grid md:grid-cols-2 gap-8 mb-8">
-                            <InputGroup label="Target Class" desc="SELECT STUDENT LEVEL">
-                                <div className="relative group">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-pm-green transition-colors"></div>
-                                    <select 
-                                        className="pm-input bg-gray-50/50 appearance-none pl-4 pr-10 py-3 text-gray-700"
-                                        value={formData.className}
-                                        onChange={(e) => setFormData({...formData, className: e.target.value})}
-                                        required
-                                    >
-                                        <option value="">Select Grade</option>
-                                        {[...Array(12)].map((_, i) => (
-                                            <option key={i+1} value={`Class ${i+1}`}>Class {i+1}</option>
+                        <div className="pm-card p-10 shadow-sm border-gray-100 bg-white mb-10 no-print">
+                            <h3 className="text-lg font-bold font-heading mb-8 flex items-center gap-2">
+                                <PenTool className="w-5 h-5 text-pm-green" />
+                                Material Configuration
+                            </h3>
+                            
+                            <form onSubmit={handleGenerate} className="space-y-8">
+                                <div className="grid md:grid-cols-2 gap-8 mb-8">
+                                    <InputGroup label="Target Class" desc="SELECT STUDENT LEVEL">
+                                        <div className="relative group">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-pm-green transition-colors"></div>
+                                            <select 
+                                                className="pm-input bg-gray-50/50 appearance-none pl-4 pr-10 py-3 text-gray-700"
+                                                value={formData.className}
+                                                onChange={(e) => setFormData({...formData, className: e.target.value})}
+                                                required
+                                            >
+                                                <option value="">Select Grade</option>
+                                                {[...Array(12)].map((_, i) => (
+                                                    <option key={i+1} value={`Class ${i+1}`}>Class {i+1}</option>
+                                                ))}
+                                                <option value="Degree">Degree/College</option>
+                                            </select>
+                                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                        </div>
+                                    </InputGroup>
+
+                                    <InputGroup label="Subject Division" desc="CORE ACADEMIC SUBJECT">
+                                        <input 
+                                            type="text"
+                                            className="pm-input bg-gray-50/50 py-3"
+                                            placeholder="e.g. Political Science"
+                                            value={formData.subject}
+                                            onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                                            required
+                                        />
+                                    </InputGroup>
+
+                                    <InputGroup label="Primary Topic" desc="THE MAIN CHAPTER OR CONCEPT">
+                                        <input 
+                                            type="text" 
+                                            className="pm-input bg-gray-50/50 py-3"
+                                            placeholder="e.g. Fundamental Rights"
+                                            value={formData.topic}
+                                            onChange={(e) => setFormData({...formData, topic: e.target.value})}
+                                            required
+                                        />
+                                    </InputGroup>
+
+                                    <InputGroup label="Sub-Topic Detail" desc="SPECIFIC SEGMENT WITHIN THE TOPIC">
+                                        <input 
+                                            type="text"
+                                            className="pm-input bg-gray-50/50 py-3"
+                                            placeholder="e.g. Right to Speech"
+                                            value={formData.subTopic}
+                                            onChange={(e) => setFormData({...formData, subTopic: e.target.value})}
+                                            required
+                                        />
+                                    </InputGroup>
+                                </div>
+
+                                <div className="pt-4 border-t border-gray-50 flex items-center justify-between gap-12">
+                                    <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+                                        {['English', 'Assamese'].map((lang) => (
+                                            <button 
+                                                key={lang}
+                                                type="button"
+                                                onClick={() => {
+                                                    const mappedData = { ...formData, language: lang };
+                                                    setFormData(mappedData);
+                                                    if (result && mappedData.className && mappedData.subject && mappedData.topic) {
+                                                        handleGenerate(null, mappedData);
+                                                    }
+                                                }}
+                                                className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${formData.language === lang ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                            >
+                                                {lang}
+                                            </button>
                                         ))}
-                                        <option value="Degree">Degree/College</option>
-                                    </select>
-                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                                </div>
-                            </InputGroup>
-
-                            <InputGroup label="Subject Division" desc="CORE ACADEMIC SUBJECT">
-                                <input 
-                                    type="text"
-                                    className="pm-input bg-gray-50/50 py-3"
-                                    placeholder="e.g. Political Science"
-                                    value={formData.subject}
-                                    onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                                    required
-                                />
-                            </InputGroup>
-
-                            <InputGroup label="Primary Topic" desc="THE MAIN CHAPTER OR CONCEPT">
-                                <input 
-                                    type="text" 
-                                    className="pm-input bg-gray-50/50 py-3"
-                                    placeholder="e.g. Fundamental Rights"
-                                    value={formData.topic}
-                                    onChange={(e) => setFormData({...formData, topic: e.target.value})}
-                                    required
-                                />
-                            </InputGroup>
-
-                            <InputGroup label="Sub-Topic Detail" desc="Specific segment within the topic">
-                                <input 
-                                    type="text"
-                                    className="pm-input bg-gray-50/30 py-3"
-                                    placeholder="e.g. Right to Speech"
-                                    value={formData.subTopic}
-                                    onChange={(e) => setFormData({...formData, subTopic: e.target.value})}
-                                    required
-                                />
-                            </InputGroup>
-                        </div>
-
-                        <div className="pt-4 border-t border-gray-50 flex items-center justify-between gap-12">
-                            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
-                                {['English', 'Assamese'].map((lang) => (
-                                    <button 
-                                        key={lang}
-                                        type="button"
-                                        onClick={() => {
-                                            const mappedData = { ...formData, language: lang };
-                                            setFormData(mappedData);
-                                            // Auto-generate if enough logic exists
-                                            if (result && mappedData.className && mappedData.subject && mappedData.topic) {
-                                                handleGenerate(null, mappedData);
-                                            }
-                                        }}
-                                        className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${formData.language === lang ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                    >
-                                        {lang}
-                                    </button>
-                                ))}
-                            </div>
-
-                                <div className="flex flex-col items-end gap-3 w-full md:w-auto">
-                                    {(profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit) && (
-                                        <p className="text-[#E11D48] font-bold text-xs bg-[#FFF1F2] px-4 py-2.5 rounded-lg border border-[#FFE4E6] flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
-                                            <Lock className="w-3.5 h-3.5" />
-                                            Contact the admin to increase your limit
-                                        </p>
-                                    )}
-                                    <button 
-                                        type="submit"
-                                        disabled={loading || (lockExpiry && currentTime < lockExpiry) || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)}
-                                        className={`pm-button-primary px-10 py-4.5 min-w-[280px] flex flex-col items-center justify-center transition-all group relative overflow-hidden transition-standard shadow-lg ${(lockExpiry || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)) ? 'bg-slate-300 cursor-not-allowed opacity-80 border-slate-200' : 'bg-pm-green border-pm-green hover:bg-green-700 active:scale-95'}`}
-                                    >
-                                        {loading ? (
-                                            <div className="flex items-center gap-3">
-                                               <Loader2 className="w-5 h-5 animate-spin text-white" />
-                                               <span className="text-lg font-black text-white uppercase tracking-widest">Synthesizing...</span>
-                                            </div>
-                                        ) : lockExpiry && currentTime < lockExpiry ? (
-                                            <div className="flex flex-col items-center leading-none text-center">
-                                                <div className="flex items-center gap-2 mb-1.5">
-                                                    <Timer className="w-4 h-4 text-white/90 animate-pulse" />
-                                                    <span className="text-lg font-black text-white uppercase tracking-tight">AI Recovering...</span>
-                                                </div>
-                                                <div className="space-y-0.5">
-                                                    <div className="text-[12px] font-black text-white tracking-widest">
-                                                        READY AT {new Date(lockExpiry).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })} IST
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-3">
-                                                <Sparkles className="w-5 h-5 flex-shrink-0 text-white group-hover:rotate-12 transition-transform opacity-90" />
-                                                <span className="text-lg font-black text-white uppercase tracking-[0.15em] py-0.5">Compose Material</span>
-                                            </div>
-                                        )}
-                                    </button>
-                                </div>
-                        </div>
-                    </form>
-                </div>
-
-
-                <div className="space-y-12">
-                    {loading ? (
-                         <div className="h-[400px] flex flex-col items-center justify-center text-center">
-                            <motion.div 
-                                animate={{ rotate: 360 }}
-                                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                                className="mb-6 p-4 bg-green-50 rounded-full border border-green-100"
-                            >
-                                <Sparkles className="w-10 h-10 text-pm-green" />
-                            </motion.div>
-                            <h4 className="text-xl font-bold font-heading text-gray-900">Drafting Educational Content</h4>
-                            <p className="text-gray-500 text-sm mt-3 max-w-xs leading-relaxed">Our educator AI is compiling your resources across multiple categories.</p>
-                         </div>
-                    ) : resetTimer ? (
-                         <div className="h-[400px] flex flex-col items-center justify-center text-center animate-in fade-in duration-500">
-                             <div className="mb-6 p-5 bg-pm-green/10 rounded-full border border-pm-green/20 relative">
-                                 <CheckCircle className="w-12 h-12 text-pm-green" />
-                                 <motion.div 
-                                    animate={{ rotate: 360 }}
-                                    transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-                                    className="absolute inset-0 rounded-full border-[3px] border-pm-green/30 border-t-pm-green"
-                                 ></motion.div>
-                             </div>
-                             <h4 className="text-2xl font-black font-heading text-gray-900">Resource Saved & Synced!</h4>
-                             <p className="text-gray-500 text-sm mt-3 max-w-xs leading-relaxed font-bold tracking-tight">Preparing standard dashboard for immediate composition iteration...</p>
-                         </div>
-                    ) : result ? (
-                        <div ref={contentRef} className="space-y-8 animate-in fade-in duration-500 scroll-mt-6">
-                            {/* Resource Header Panel */}
-                            <div className="flex justify-between items-center mb-6 pt-4 border-b border-gray-100 pb-6 print:hidden no-print">
-                                <h3 className="text-xl font-bold font-heading text-gray-900">Educator's Resource Panel</h3>
-                                <div className="flex gap-4">
-                                    <button 
-                                         onClick={() => handleCopy(result, 'all')}
-                                         className="pm-button-secondary py-2 flex items-center gap-2 group hover:border-pm-green/30"
-                                    >
-                                        {copied === 'all' ? <CheckCircle className="w-4 h-4 text-pm-green" /> : <Copy className="w-4 h-4 text-gray-400 group-hover:text-pm-green transition-colors" />}
-                                        <span className="text-sm font-bold">Copy Full Content</span>
-                                    </button>
-                                    <button 
-                                        disabled={saving || isSaved}
-                                        onClick={() => saveCreation(true)}
-                                        className={`pm-button-secondary py-2 flex items-center gap-2 transition-all shadow-sm ${isSaved ? 'bg-pm-green text-white border-pm-green' : 'bg-pm-green/5 text-pm-green border-pm-green/20 hover:bg-pm-green hover:text-white'}`}
-                                    >
-                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isSaved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                                        <span className="text-sm font-bold">{saving ? 'Syncing...' : isSaved ? 'Saved Draft' : 'Save Draft'}</span>
-                                    </button>
-                                    <button 
-                                         onClick={() => handlePrint(null)}
-                                         className="pm-button-primary bg-indigo-600 hover:bg-indigo-700 py-2 flex items-center gap-2 shadow-lg shadow-indigo-900/10"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                        <span className="text-sm font-bold text-white">Download PDF</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Main Document Body */}
-                            <div className="pm-card p-12 bg-white shadow-xl ring-1 ring-gray-100 print:shadow-none print:ring-0 transition-standard hover:shadow-2xl">
-                                <div className="border-b-2 border-pm-green/30 pb-8 mb-10 overflow-hidden relative">
-                                    <div className="flex justify-between items-end relative z-10">
-                                        <div>
-                                            <h1 className="text-2xl font-black font-heading text-pm-green mb-1 uppercase tracking-tight">{formData.subject} - {formData.topic}</h1>
-                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest leading-none">Standard {formData.className} • {formData.language} Medium</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">PaathSohayok AI</p>
-                                            <p className="text-[10px] text-gray-300 font-bold">{new Date().toLocaleDateString('en-IN')}</p>
-                                        </div>
                                     </div>
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-pm-green/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                                </div>
 
-                                <div className="space-y-16">
-                                    {renderDocumentSections(result, formData.language, false)}
-                                </div>
-                            </div>
-
-                            <div className="text-center pt-16 no-print border-t border-gray-100">
-                                <button 
-                                    onClick={() => setResult(null)}
-                                    className="text-gray-400 font-black hover:text-pm-green flex items-center gap-3 mx-auto transition-colors group"
-                                >
-                                    <RotateCcw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
-                                    <span className="text-sm uppercase tracking-widest">Start New Synthesis</span>
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        /* Idle State / Fallback */
-                        <div className="h-[450px] flex flex-col items-center justify-center text-center p-12 pm-card border-dashed border-gray-200 bg-gray-50/30 rounded-[2.5rem] transition-all hover:bg-white hover:border-pm-green/20">
-                            <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-xl shadow-green-900/5 mb-8 border border-gray-100 animate-bounce-slow">
-                                <FileText className="w-10 h-10 text-gray-200" />
-                            </div>
-                            <h3 className="text-2xl font-black font-heading text-gray-400 leading-tight">Workspace Ready</h3>
-                            <p className="text-gray-400 text-sm mt-4 max-w-sm font-medium leading-relaxed">
-                                Please configure the lesson details in the form above and click "Compose Material" to generate high-quality assets.
-                            </p>
-                        </div>
-                    )}
-                </div>
-                </>
-            )}
-
-            {activeTab === 'history' && (
-                <div className="print:hidden no-print">
-                    <header className="mb-10 flex justify-between items-end">
-                       <div>
-                          <h2 className="text-3xl font-bold font-heading text-gray-900 tracking-tight">Creation History</h2>
-                          <p className="text-gray-500 text-sm mt-1">Review, manage and download your previously generated teaching materials.</p>
-                       </div>
-                    </header>
-
-                    <div className="pm-card shadow-sm border-gray-100 bg-white overflow-hidden">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/20">
-                            <h3 className="text-lg font-bold font-heading">Archived Resources</h3>
-                            <div className="relative">
-                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input 
-                                    type="text"
-                                    placeholder="Filter your history..."
-                                    className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-pm-green/20 focus:border-pm-green outline-none transition-all w-64"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-[#F9FAFB] text-gray-500 text-[11px] uppercase tracking-widest font-bold">
-                                    <tr>
-                                        <th className="px-6 py-4">Resource Details</th>
-                                        <th className="px-6 py-4">Class / Subject</th>
-                                        <th className="px-6 py-4 text-center">Language</th>
-                                        <th className="px-6 py-4">Generation Date</th>
-                                        <th className="px-6 py-4 text-right pr-12">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan="4" className="px-8 py-20 text-center text-gray-400 text-sm">
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <Loader2 className="w-8 h-8 animate-spin text-pm-green mb-4" />
-                                                    <span className="font-semibold tracking-wide animate-pulse">Syncing your records...</span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : filteredHistory.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="4" className="px-8 py-20 text-center text-gray-400 text-sm italic">
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <History className="w-12 h-12 text-gray-200 mb-4" />
-                                                    <h3 className="text-lg font-bold text-gray-500">No Records Found</h3>
-                                                    <p className="text-sm text-gray-400 mt-1">Try a different search or generate new content to populate history.</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        paginatedHistory.map((item, idx) => (
-                                            <tr key={item.id} className={`${idx % 2 === 1 ? 'bg-gray-50/30' : 'bg-white'} hover:bg-green-50/30 transition-colors group cursor-default`}>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center text-pm-green group-hover:bg-pm-green group-hover:text-white transition-all shadow-sm">
-                                                            <FileText className="w-5 h-5 flex-shrink-0" />
+                                        <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+                                            {(profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit) && (
+                                                <p className="text-[#E11D48] font-bold text-xs bg-[#FFF1F2] px-4 py-2.5 rounded-lg border border-[#FFE4E6] flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
+                                                    <Lock className="w-3.5 h-3.5" />
+                                                    Contact the admin to increase your limit
+                                                </p>
+                                            )}
+                                            <button 
+                                                type="submit"
+                                                disabled={loading || (lockExpiry && currentTime < lockExpiry) || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)}
+                                                className={`pm-button-primary px-10 py-4.5 min-w-[280px] flex flex-col items-center justify-center transition-all group relative overflow-hidden transition-standard shadow-lg ${(lockExpiry || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)) ? 'bg-slate-300 cursor-not-allowed opacity-80 border-slate-200' : 'bg-pm-green border-pm-green hover:bg-green-700 active:scale-95'}`}
+                                            >
+                                                {loading ? (
+                                                    <div className="flex items-center gap-3">
+                                                       <Loader2 className="w-5 h-5 animate-spin text-white" />
+                                                       <span className="text-lg font-black text-white uppercase tracking-widest">Synthesizing...</span>
+                                                    </div>
+                                                ) : lockExpiry && currentTime < lockExpiry ? (
+                                                    <div className="flex flex-col items-center leading-none text-center">
+                                                        <div className="flex items-center gap-2 mb-1.5">
+                                                            <Timer className="w-4 h-4 text-white/90 animate-pulse" />
+                                                            <span className="text-lg font-black text-white uppercase tracking-tight">AI Recovering...</span>
                                                         </div>
-                                                        <div>
-                                                            <p className="font-bold text-gray-900 text-sm leading-tight">{item.file_name || 'Untitled Generation'}</p>
-                                                            <p className="text-[10px] text-pm-green font-bold uppercase mt-1 tracking-tight">{item.topic}</p>
+                                                        <div className="space-y-0.5">
+                                                            <div className="text-[12px] font-black text-white tracking-widest">
+                                                                READY AT {new Date(lockExpiry).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })} IST
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold text-gray-600">GRADE {item.class}</span>
-                                                        <p className="text-sm font-medium text-gray-600">{item.subject}</p>
+                                                ) : (
+                                                    <div className="flex items-center gap-3">
+                                                        <Sparkles className="w-5 h-5 flex-shrink-0 text-white group-hover:rotate-12 transition-transform opacity-90" />
+                                                        <span className="text-lg font-black text-white uppercase tracking-[0.15em] py-0.5">Compose Material</span>
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${item.language === 'Assamese' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
-                                                        {item.language || 'English'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-[11px] text-gray-400 font-bold whitespace-pre-wrap uppercase leading-normal">
-                                                        {new Date(item.created_at).toLocaleDateString()} <br/>
-                                                        {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-right pr-10 whitespace-nowrap">
-                                                    <div className="flex items-center justify-end gap-3 transition-opacity">
-                                                        <button 
-                                                            onClick={() => handleDownloadFromHistory(item)}
-                                                            disabled={historyDownloadingId === item.id}
-                                                            className="p-2.5 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100/50 disabled:opacity-50"
-                                                            title="Download PDF"
-                                                        >
-                                                            {historyDownloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => deleteFromHistory(item.id)}
-                                                            className="p-2.5 text-rose-500 bg-rose-50/50 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-sm border border-rose-100/50"
-                                                            title="Delete Record"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                            {!loading && totalHistoryPages > 1 && (
-                                <div className="flex justify-between items-center px-8 py-4 bg-gray-50/50 border-t border-gray-100">
-                                    <span className="text-sm font-semibold text-gray-500">Page {historyPage} of {totalHistoryPages}</span>
-                                    <div className="flex gap-2">
+                                                )}
+                                            </button>
+                                        </div>
+                                </div>
+                            </form>
+                        </div>
+
+
+                        <div className="space-y-12">
+                            {loading ? (
+                                 <div className="h-[400px] flex flex-col items-center justify-center text-center">
+                                    <motion.div 
+                                        animate={{ rotate: 360 }}
+                                        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                                        className="mb-6 p-4 bg-green-50 rounded-full border border-green-100"
+                                    >
+                                        <Sparkles className="w-10 h-10 text-pm-green" />
+                                    </motion.div>
+                                    <h4 className="text-xl font-bold font-heading text-gray-900">Drafting Educational Content</h4>
+                                    <p className="text-gray-500 text-sm mt-3 max-w-xs leading-relaxed">Our educator AI is compiling your resources across multiple categories.</p>
+                                 </div>
+                            ) : resetTimer ? (
+                                 <div className="h-[400px] flex flex-col items-center justify-center text-center animate-in fade-in duration-500">
+                                     <div className="mb-6 p-5 bg-pm-green/10 rounded-full border border-pm-green/20 relative">
+                                         <CheckCircle className="w-12 h-12 text-pm-green" />
+                                         <motion.div 
+                                            animate={{ rotate: 360 }}
+                                            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                                            className="absolute inset-0 rounded-full border-[3px] border-pm-green/30 border-t-pm-green"
+                                         ></motion.div>
+                                     </div>
+                                     <h4 className="text-2xl font-black font-heading text-gray-900">Resource Saved & Synced!</h4>
+                                     <p className="text-gray-500 text-sm mt-3 max-w-xs leading-relaxed font-bold tracking-tight">Preparing standard dashboard for immediate composition iteration...</p>
+                                 </div>
+                            ) : result ? (
+                                <div ref={contentRef} className="space-y-8 animate-in fade-in duration-500 scroll-mt-6">
+                                    {/* Resource Header Panel */}
+                                    <div className="flex justify-between items-center mb-6 pt-4 border-b border-gray-100 pb-6 print:hidden no-print">
+                                        <h3 className="text-xl font-bold font-heading text-gray-900">Educator's Resource Panel</h3>
+                                        <div className="flex gap-4">
+                                            <button 
+                                                 onClick={() => handleCopy(result, 'all')}
+                                                 className="pm-button-secondary py-2 flex items-center gap-2 group hover:border-pm-green/30"
+                                            >
+                                                {copied === 'all' ? <CheckCircle className="w-4 h-4 text-pm-green" /> : <Copy className="w-4 h-4 text-gray-400 group-hover:text-pm-green transition-colors" />}
+                                                <span className="text-sm font-bold">Copy Full Content</span>
+                                            </button>
+                                            <button 
+                                                disabled={saving || isSaved}
+                                                onClick={() => saveCreation(true)}
+                                                className={`pm-button-secondary py-2 flex items-center gap-2 transition-all shadow-sm ${isSaved ? 'bg-pm-green text-white border-pm-green' : 'bg-pm-green/5 text-pm-green border-pm-green/20 hover:bg-pm-green hover:text-white'}`}
+                                            >
+                                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isSaved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                                                <span className="text-sm font-bold">{saving ? 'Syncing...' : isSaved ? 'Saved Draft' : 'Save Draft'}</span>
+                                            </button>
+                                            <button 
+                                                 onClick={() => handlePrint(null)}
+                                                 className="pm-button-primary bg-indigo-600 hover:bg-indigo-700 py-2 flex items-center gap-2 shadow-lg shadow-indigo-900/10"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                <span className="text-sm font-bold text-white">Download PDF</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Main Document Body */}
+                                    <div className="pm-card p-12 bg-white shadow-xl ring-1 ring-gray-100 print:shadow-none print:ring-0 transition-standard hover:shadow-2xl">
+                                        <div className="border-b-2 border-pm-green/30 pb-8 mb-10 overflow-hidden relative">
+                                            <div className="flex justify-between items-end relative z-10">
+                                                <div>
+                                                    <h1 className="text-2xl font-black font-heading text-pm-green mb-1 uppercase tracking-tight">{formData.subject} - {formData.topic}</h1>
+                                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest leading-none">Standard {formData.className} • {formData.language} Medium</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">PaathSohayok AI</p>
+                                                    <p className="text-[10px] text-gray-300 font-bold">{new Date().toLocaleDateString('en-IN')}</p>
+                                                </div>
+                                            </div>
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-pm-green/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                                        </div>
+
+                                        <div className="space-y-16">
+                                            {renderDocumentSections(result, formData.language, false)}
+                                        </div>
+                                    </div>
+
+                                    <div className="text-center pt-16 no-print border-t border-gray-100">
                                         <button 
-                                            disabled={historyPage === 1}
-                                            onClick={() => setHistoryPage(p => p - 1)}
-                                            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
+                                            onClick={() => setResult(null)}
+                                            className="text-gray-400 font-black hover:text-pm-green flex items-center gap-3 mx-auto transition-colors group"
                                         >
-                                            Previous
-                                        </button>
-                                        <button 
-                                            disabled={historyPage === totalHistoryPages}
-                                            onClick={() => setHistoryPage(p => p + 1)}
-                                            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
-                                        >
-                                            Next
+                                            <RotateCcw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+                                            <span className="text-sm uppercase tracking-widest">Start New Synthesis</span>
                                         </button>
                                     </div>
+                                </div>
+                            ) : (
+                                /* Idle State / Fallback */
+                                <div className="h-[450px] flex flex-col items-center justify-center text-center p-12 pm-card border-dashed border-gray-200 bg-gray-50/30 rounded-[2.5rem] transition-all hover:bg-white hover:border-pm-green/20">
+                                    <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-xl shadow-green-900/5 mb-8 border border-gray-100 animate-bounce-slow">
+                                        <FileText className="w-10 h-10 text-gray-200" />
+                                    </div>
+                                    <h3 className="text-2xl font-black font-heading text-gray-400 leading-tight">Workspace Ready</h3>
+                                    <p className="text-gray-400 text-sm mt-4 max-w-sm font-medium leading-relaxed">
+                                        Please configure the lesson details in the form above and click "Compose Material" to generate high-quality assets.
+                                    </p>
                                 </div>
                             )}
                         </div>
-                    </div>
-                </div>
-            )}
+                        </>
+                    )}
 
-            {activeTab === 'settings' && (
-                <div className="pm-card p-20 text-center bg-white border-gray-100 no-print">
-                    <Settings className="w-16 h-16 text-gray-200 mx-auto mb-6" />
-                    <h3 className="text-2xl font-bold font-heading text-gray-800">Account Preferences</h3>
-                    <p className="text-gray-500 max-w-sm mx-auto mt-2 leading-relaxed">Customize your teaching defaults and security settings here. Features coming soon in next update.</p>
-                </div>
+                    {activeTab === 'history' && (
+                        <div className="print:hidden no-print">
+                            <header className="mb-10 flex justify-between items-end">
+                               <div>
+                                  <h2 className="text-3xl font-bold font-heading text-gray-900 tracking-tight">Creation History</h2>
+                                  <p className="text-gray-500 text-sm mt-1">Review, manage and download your previously generated teaching materials.</p>
+                               </div>
+                            </header>
+
+                            <div className="pm-card shadow-sm border-gray-100 bg-white overflow-hidden">
+                                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/20">
+                                    <h3 className="text-lg font-bold font-heading">Archived Resources</h3>
+                                    <div className="relative">
+                                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input 
+                                            type="text"
+                                            placeholder="Filter your history..."
+                                            className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-pm-green/20 focus:border-pm-green outline-none transition-all w-64"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-gray-50/50">
+                                                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100">Creation Detail</th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100">Standard & Medium</th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 text-right pr-10">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {loading ? (
+                                                <tr>
+                                                    <td colSpan="3" className="px-8 py-20 text-center">
+                                                        <Loader2 className="w-8 h-8 animate-spin text-pm-green mx-auto mb-4" />
+                                                        <p className="text-gray-400 font-bold text-sm">Retrieving your archives...</p>
+                                                    </td>
+                                                </tr>
+                                            ) : paginatedHistory.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="3" className="px-8 py-20 text-center">
+                                                        <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                                            <History className="w-8 h-8 text-gray-200" />
+                                                        </div>
+                                                        <p className="text-gray-400 font-bold text-sm">No materials found in your history.</p>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                paginatedHistory.map((item) => (
+                                                    <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
+                                                        <td className="px-8 py-5">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-10 h-10 rounded-xl bg-green-50 text-pm-green flex items-center justify-center font-bold text-xs shadow-sm">
+                                                                    {item.subject ? item.subject.charAt(0).toUpperCase() : 'A'}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-bold text-gray-900 group-hover:text-pm-green transition-colors">{item.topic || 'Untitled Creation'}</p>
+                                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">{item.subject}</span>
+                                                                        <span className="w-1 h-1 bg-gray-200 rounded-full"></span>
+                                                                        <span className="text-[10px] font-medium text-gray-400">{new Date(item.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-5">
+                                                            <div className="flex flex-col">
+                                                                <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-tight w-fit">
+                                                                    {item.class || 'N/A'}
+                                                                </span>
+                                                                <div className="flex items-center gap-1.5 mt-1.5">
+                                                                    <div className={`w-1.5 h-1.5 rounded-full ${item.language === 'Assamese' ? 'bg-orange-400' : 'bg-indigo-400'}`}></div>
+                                                                    <span className="text-[10px] font-bold text-gray-400">{item.language} Medium</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right pr-10 whitespace-nowrap">
+                                                            <div className="flex items-center justify-end gap-3 transition-opacity">
+                                                                <button 
+                                                                    onClick={() => handleDownloadFromHistory(item)}
+                                                                    disabled={historyDownloadingId === item.id}
+                                                                    className="p-2.5 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm border border-indigo-100/50 disabled:opacity-50"
+                                                                    title="Download PDF"
+                                                                >
+                                                                    {historyDownloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => deleteFromHistory(item.id)}
+                                                                    className="p-2.5 text-rose-500 bg-rose-50/50 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-sm border border-rose-100/50"
+                                                                    title="Delete Record"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                    {!loading && totalHistoryPages > 1 && (
+                                        <div className="flex justify-between items-center px-8 py-4 bg-gray-50/50 border-t border-gray-100">
+                                            <span className="text-sm font-semibold text-gray-500">Page {historyPage} of {totalHistoryPages}</span>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    disabled={historyPage === 1}
+                                                    onClick={() => setHistoryPage(p => p - 1)}
+                                                    className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
+                                                >
+                                                    Previous
+                                                </button>
+                                                <button 
+                                                    disabled={historyPage === totalHistoryPages}
+                                                    onClick={() => setHistoryPage(p => p + 1)}
+                                                    className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md disabled:opacity-50 hover:bg-gray-50 transition-all shadow-sm"
+                                                >
+                                                    Next
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'settings' && (
+                        <div className="pm-card p-20 text-center bg-white border-gray-100 no-print">
+                            <Settings className="w-16 h-16 text-gray-200 mx-auto mb-6" />
+                            <h3 className="text-2xl font-bold font-heading text-gray-800">Account Preferences</h3>
+                            <p className="text-gray-500 max-w-sm mx-auto mt-2 leading-relaxed">Customize your teaching defaults and security settings here. Features coming soon in next update.</p>
+                        </div>
+                    )}
+                </>
             )}
         </div>
       </main>
@@ -841,9 +835,10 @@ const TeacherDashboard = ({ user, onLogout }) => {
                           <p className="text-[10px] text-gray-300 font-bold">{new Date().toLocaleDateString('en-IN')}</p>
                       </div>
                   </div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-pm-green/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
               </div>
 
-              <div className="space-y-12">
+              <div className="space-y-16">
                   {renderDocumentSections(printData.content, printData.language, true)}
               </div>
           </div>
