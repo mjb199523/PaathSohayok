@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { supabaseAdmin } = require('../config/supabase');
 const { verifyToken } = require('../middleware/auth');
 
 function getNextMidnightPT() {
@@ -27,6 +28,40 @@ router.post('/', verifyToken, async (req, res) => {
 
   if (!geminiKey) {
     return res.status(500).json({ error: 'AI API Key is missing' });
+  }
+
+  // Check Content Limit
+  const { data: profile, error: limitError } = await supabaseAdmin
+    .from('profiles')
+    .select('content_limit, content_count, role')
+    .eq('id', userId)
+    .single();
+
+  if (limitError || !profile) {
+    return res.status(500).json({ error: 'Failed to verify user limits' });
+  }
+
+  // Admin bypass limit (optional, but usually good)
+  if (profile.role !== 'admin') {
+    if (profile.content_count >= profile.content_limit) {
+      return res.status(403).json({ 
+        error: 'Contact the admin to increase your limit',
+        limitReached: true
+      });
+    }
+  }
+
+  // Increment Click Count
+  if (profile.role !== 'admin') {
+    const { error: incrementError } = await supabaseAdmin
+      .from('profiles')
+      .update({ content_count: profile.content_count + 1 })
+      .eq('id', userId);
+    
+    if (incrementError) {
+      console.error('Error incrementing content count:', incrementError);
+      // We continue anyway, but log it.
+    }
   }
 
   // Check Backend Lock

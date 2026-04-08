@@ -27,11 +27,13 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [resetTimer, setResetTimer] = useState(false);
   const [printData, setPrintData] = useState(null);
   const [historyDownloadingId, setHistoryDownloadingId] = useState(null);
+  const [profile, setProfile] = useState(null);
   const contentRef = useRef();
 
   useEffect(() => {
     setHistoryPage(1);
     setSearchTerm('');
+    fetchProfile();
   }, [activeTab]);
 
   useEffect(() => {
@@ -53,6 +55,17 @@ const TeacherDashboard = ({ user, onLogout }) => {
         }, 300);
     }
   }, [loading, result, resetTimer]);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/auth/profile`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
+      });
+      setProfile(response.data);
+    } catch (err) {
+      console.error('Failed to fetch profile');
+    }
+  };
 
   const fetchHistory = async () => {
     try {
@@ -303,6 +316,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
       }
     } finally {
       setLoading(false);
+      fetchProfile();
     }
   };
 
@@ -514,45 +528,53 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                 ))}
                             </div>
 
-                                <button 
-                                    type="submit"
-                                    disabled={loading || (lockExpiry && currentTime < lockExpiry)}
-                                    className={`pm-button-primary px-10 py-5 flex flex-col items-center justify-center transition-all group shadow-2xl relative overflow-hidden transition-standard ${lockExpiry ? 'bg-gray-400 cursor-not-allowed border-gray-100' : 'bg-pm-green border-pm-green hover:bg-green-700 active:scale-95'}`}
-                                >
-                                    {loading ? (
-                                        <div className="flex items-center gap-3">
-                                           <Loader2 className="w-6 h-6 animate-spin text-white" />
-                                           <span className="text-xl font-black text-white uppercase tracking-widest">Synthesizing...</span>
-                                        </div>
-                                    ) : lockExpiry && currentTime < lockExpiry ? (
-                                        <div className="flex flex-col items-center leading-none text-center">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Timer className="w-5 h-5 text-white/90 animate-pulse" />
-                                                <span className="text-xl font-black text-white uppercase tracking-tight">AI Recovering...</span>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="text-[14px] font-black text-white tracking-widest">
-                                                    READY AT {new Date(lockExpiry).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })} IST
-                                                </div>
-                                                 <div className="text-[10px] font-bold text-white/60 uppercase tracking-[0.3em]">
-                                                     Wait {(() => {
-                                                         const diff = lockExpiry - currentTime;
-                                                         const hours = Math.floor(diff / 3600000);
-                                                         const mins = Math.floor((diff % 3600000) / 60000);
-                                                         const secs = Math.floor((diff % 60000) / 1000);
-                                                         if (hours > 0) return `${hours}h ${mins}m`;
-                                                         return `${mins}m ${secs}s`;
-                                                     })()}
-                                                 </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-4">
-                                            <Sparkles className="w-6 h-6 flex-shrink-0 text-white group-hover:rotate-12 transition-transform" />
-                                            <span className="text-xl font-black text-white uppercase tracking-widest">Compose Material</span>
-                                        </div>
+                                <div className="flex flex-col items-center gap-4 w-full md:w-auto">
+                                    {(profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit) && (
+                                        <p className="text-rose-600 font-bold text-sm bg-rose-50 px-4 py-2 rounded-lg border border-rose-100 flex items-center gap-2">
+                                            <Lock className="w-4 h-4" />
+                                            Contact the admin to increase your limit
+                                        </p>
                                     )}
-                                </button>
+                                    <button 
+                                        type="submit"
+                                        disabled={loading || (lockExpiry && currentTime < lockExpiry) || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)}
+                                        className={`pm-button-primary px-10 py-5 flex flex-col items-center justify-center transition-all group shadow-2xl relative overflow-hidden transition-standard ${(lockExpiry || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)) ? 'bg-gray-400 cursor-not-allowed border-gray-100' : 'bg-pm-green border-pm-green hover:bg-green-700 active:scale-95'}`}
+                                    >
+                                        {loading ? (
+                                            <div className="flex items-center gap-3">
+                                               <Loader2 className="w-6 h-6 animate-spin text-white" />
+                                               <span className="text-xl font-black text-white uppercase tracking-widest">Synthesizing...</span>
+                                            </div>
+                                        ) : lockExpiry && currentTime < lockExpiry ? (
+                                            <div className="flex flex-col items-center leading-none text-center">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Timer className="w-5 h-5 text-white/90 animate-pulse" />
+                                                    <span className="text-xl font-black text-white uppercase tracking-tight">AI Recovering...</span>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-[14px] font-black text-white tracking-widest">
+                                                        READY AT {new Date(lockExpiry).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })} IST
+                                                    </div>
+                                                     <div className="text-[10px] font-bold text-white/60 uppercase tracking-[0.3em]">
+                                                         Wait {(() => {
+                                                             const diff = lockExpiry - currentTime;
+                                                             const hours = Math.floor(diff / 3600000);
+                                                             const mins = Math.floor((diff % 3600000) / 60000);
+                                                             const secs = Math.floor((diff % 60000) / 1000);
+                                                             if (hours > 0) return `${hours}h ${mins}m`;
+                                                             return `${mins}m ${secs}s`;
+                                                         })()}
+                                                     </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-4">
+                                                <Sparkles className="w-6 h-6 flex-shrink-0 text-white group-hover:rotate-12 transition-transform" />
+                                                <span className="text-xl font-black text-white uppercase tracking-widest">Compose Material</span>
+                                            </div>
+                                        )}
+                                    </button>
+                                </div>
                         </div>
                     </form>
                 </div>

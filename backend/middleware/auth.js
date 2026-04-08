@@ -1,8 +1,4 @@
-const jwt = require('jsonwebtoken'); // Wait, Supabase uses its own JWT.
-// Better: Use Supabase client to verify the token.
-const { createClient } = require('@supabase/supabase-js');
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+const { supabase, supabaseAdmin } = require('../config/supabase');
 
 const verifyToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -28,8 +24,6 @@ const verifyToken = async (req, res, next) => {
 const verifyAdmin = async (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
 
-    // Important: Re-fetch role from profiles table (protected metadata)
-    const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
     const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('role')

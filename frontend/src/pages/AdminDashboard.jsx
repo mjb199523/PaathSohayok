@@ -11,12 +11,14 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'teacher' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'teacher', content_limit: 0 });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [usersPage, setUsersPage] = useState(1);
   const [creationsPage, setCreationsPage] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const ITEMS_PER_PAGE = 10;
   const [stats, setStats] = useState({ total_creations: 0, pdf_downloads: 0 });
   const [printData, setPrintData] = useState(null);
@@ -184,6 +186,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setSubmitting(true);
     
     try {
       if (editingUserId) {
@@ -197,17 +200,25 @@ const AdminDashboard = ({ user, onLogout }) => {
         });
         setSuccess('User created successfully!');
       }
-      setNewUser({ name: '', email: '', password: '', role: 'teacher' });
+      setNewUser({ name: '', email: '', password: '', role: 'teacher', content_limit: 0 });
       setShowAddForm(false);
       setEditingUserId(null);
       fetchUsers();
     } catch (err) {
       setError(err.response?.data?.error || `Failed to ${editingUserId ? 'update' : 'create'} user`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const openEditModal = (user) => {
-    setNewUser({ name: user.name || '', email: user.email, password: '', role: user.role || 'teacher' });
+    setNewUser({ 
+      name: user.name || '', 
+      email: user.email, 
+      password: '', 
+      role: user.role || 'teacher',
+      content_limit: user.content_limit || 0
+    });
     setEditingUserId(user.id);
     setShowAddForm(true);
   };
@@ -215,13 +226,16 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   const deleteUser = async (id) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
+    setDeletingId(id);
     try {
       await axios.delete(`${API_URL}/api/admin/users/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
       });
       fetchUsers();
     } catch (err) {
-      alert('Failed to delete user');
+      console.error('Failed to delete user');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -308,7 +322,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                         <button 
                             onClick={() => {
                                 setEditingUserId(null);
-                                setNewUser({ name: '', email: '', password: '', role: 'teacher' });
+                                setNewUser({ name: '', email: '', password: '', role: 'teacher', content_limit: 0 });
                                 setShowAddForm(true);
                             }}
                             className="pm-button-primary flex items-center gap-2 px-6 shadow-md shadow-green-900/10"
@@ -350,6 +364,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                                         <th className="px-8 py-4">Status & Name</th>
                                         <th className="px-8 py-4">Internal Email</th>
                                         <th className="px-8 py-4">System Role</th>
+                                        <th className="px-8 py-4">Content Limit (Used/Total)</th>
                                         <th className="px-8 py-4 text-right pr-12">Actions</th>
                                     </tr>
                                 </thead>
@@ -381,9 +396,32 @@ const AdminDashboard = ({ user, onLogout }) => {
                                                         {(u.role || 'teacher').toUpperCase()}
                                                     </span>
                                                 </td>
+                                                <td className="px-8 py-5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-bold text-gray-700">{u.content_count || 0}</span>
+                                                        <span className="text-gray-300">/</span>
+                                                        <span className="text-sm font-black text-pm-green">{u.content_limit || 0}</span>
+                                                    </div>
+                                                </td>
                                                 <td className="px-8 py-5 text-right space-x-2 pr-12 transition-opacity whitespace-pre-wrap">
-                                                    <button onClick={() => openEditModal(u)} className="p-2.5 bg-white border border-gray-100 text-blue-600 rounded-lg hover:border-blue-200 hover:shadow-sm transition-all"><Edit2 className="w-4 h-4" /></button>
-                                                    <button onClick={() => deleteUser(u.id)} className="p-2.5 bg-white border border-rose-100 text-rose-500 rounded-lg hover:border-rose-400 hover:shadow-sm transition-all"><Trash2 className="w-4 h-4" /></button>
+                                                    <button 
+                                                        disabled={deletingId === u.id}
+                                                        onClick={() => openEditModal(u)} 
+                                                        className="p-2.5 bg-white border border-gray-100 text-blue-600 rounded-lg hover:border-blue-200 hover:shadow-sm transition-all"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button 
+                                                        disabled={deletingId === u.id}
+                                                        onClick={() => deleteUser(u.id)} 
+                                                        className={`p-2.5 bg-white border border-rose-100 text-rose-500 rounded-lg hover:border-rose-400 hover:shadow-sm transition-all ${deletingId === u.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        {deletingId === u.id ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <Trash2 className="w-4 h-4" />
+                                                        )}
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))
@@ -561,16 +599,37 @@ const AdminDashboard = ({ user, onLogout }) => {
                         <h2 className="text-2xl font-bold font-heading mb-2">{editingUserId ? 'Edit Faculty' : 'Register New Faculty'}</h2>
                         <p className="text-gray-500 text-sm leading-relaxed">{editingUserId ? 'Update the details for this accounts.' : 'Provide basic details to create a secure teacher login account. Passwords can be changed later.'}</p>
                     </div>
+
+                    {error && (
+                        <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-sm font-semibold flex items-center gap-2">
+                           <ShieldAlert className="w-4 h-4" /> {error}
+                        </div>
+                    )}
+                    {success && (
+                        <div className="mb-6 p-4 bg-green-50 border border-green-100 rounded-xl text-pm-green text-sm font-semibold flex items-center gap-2">
+                           <CheckCircle2 className="w-4 h-4" /> {success}
+                        </div>
+                    )}
                     
                     <form onSubmit={handleAddUser} className="space-y-6">
                         <FormField label="Teacher Name" icon={<User className="text-gray-400" />} placeholder="Enter full name" value={newUser.name} onChange={(val) => setNewUser({...newUser, name: val})} />
                         <FormField label="Official Email" icon={<Mail className="text-gray-400" />} placeholder="teacher@school.edu" type="email" value={newUser.email} onChange={(val) => setNewUser({...newUser, email: val})} />
-                        <FormField label={editingUserId ? "New Password (Optional)" : "Temporary Password"} icon={<Lock className="text-gray-400" />} placeholder="••••••••" type="password" value={newUser.password} onChange={(val) => setNewUser({...newUser, password: val})} />
+                        <FormField label={editingUserId ? "New Password (Optional)" : "Temporary Password"} icon={<Lock className="text-gray-400" />} placeholder="••••••••" type="password" required={!editingUserId} value={newUser.password} onChange={(val) => setNewUser({...newUser, password: val})} />
+                        <FormField label="Content Generation Limit" icon={<FileText className="text-gray-400" />} placeholder="Enter limit (e.g. 5)" type="number" value={newUser.content_limit} onChange={(val) => setNewUser({...newUser, content_limit: parseInt(val) || 0})} />
 
                         <div className="pt-4">
-                            <button className="pm-button-primary w-full py-3.5 flex items-center justify-center gap-3">
-                                {editingUserId ? <Edit2 className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                                <span className="text-lg font-bold">{editingUserId ? 'Update Account' : 'Generate Account'}</span>
+                            <button 
+                                disabled={submitting}
+                                className={`pm-button-primary w-full py-3.5 flex items-center justify-center gap-3 ${submitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                                {submitting ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    editingUserId ? <Edit2 className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />
+                                )}
+                                <span className="text-lg font-bold">
+                                    {submitting ? (editingUserId ? 'Updating...' : 'Creating...') : (editingUserId ? 'Update Account' : 'Generate Account')}
+                                </span>
                             </button>
                         </div>
                     </form>
@@ -616,7 +675,7 @@ const StatsCard = ({ title, value, icon }) => (
     </div>
 );
 
-const FormField = ({ label, icon, placeholder, type = "text", value, onChange }) => (
+const FormField = ({ label, icon, placeholder, type = "text", value, onChange, required = true }) => (
     <div>
         <label className="block text-sm font-semibold text-gray-800 mb-2 leading-tight">{label}</label>
         <div className="relative group">
@@ -624,7 +683,7 @@ const FormField = ({ label, icon, placeholder, type = "text", value, onChange })
                 {icon}
             </div>
             <input 
-                required
+                required={required}
                 type={type} 
                 className="pm-input pl-11"
                 placeholder={placeholder}

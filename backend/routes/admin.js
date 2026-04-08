@@ -1,18 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
-
-const adminUrl = process.env.SUPABASE_URL;
-const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!adminUrl || !adminKey) {
-  console.warn('⚠️ WARNING: Admin credentials missing. Admin features will not work.');
-}
-
-const supabaseAdmin = (adminUrl && adminKey)
-  ? createClient(adminUrl, adminKey)
-  : { from: () => ({ select: () => ({ data: [] }) }), auth: { admin: {} } }; // Dummy
-
+const { supabaseAdmin } = require('../config/supabase');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 
 // Apply Global Auth to all Admin routes
@@ -38,13 +26,22 @@ router.post('/users', verifyAdmin, async (req, res) => {
       return res.status(400).json({ error: userError.message });
     }
 
-    // Add profile data (name, role)
+    // Add profile data (name, role, content_limit)
+    console.log('Creating profile with limit:', req.body.content_limit);
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .upsert({ id: user.user.id, name, role, email });
+      .upsert({ 
+        id: user.user.id, 
+        name, 
+        role, 
+        email,
+        content_limit: parseInt(req.body.content_limit) || 0,
+        content_count: 0
+      });
 
     if (profileError) {
-      return res.status(500).json({ error: 'Failed to create profile' });
+      console.error('Profile creation error:', profileError);
+      return res.status(500).json({ error: 'Failed to create profile. Ensure database schema is up to date.' });
     }
 
     res.json({ message: 'User created successfully', user: user.user });
@@ -97,7 +94,7 @@ router.delete('/users/:id', verifyAdmin, async (req, res) => {
 router.put('/users/:id', verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, content_limit } = req.body;
 
     // 1. Update Auth user if password or email changed (Needs proper Supabase Admin method, email update handles separately)
     const updateData = {};
@@ -112,8 +109,22 @@ router.put('/users/:id', verifyAdmin, async (req, res) => {
     // 2. Update Profile
     const profileUpdateData = {};
     if (name) profileUpdateData.name = name;
-    if (role) profileUpdateData.role = role;
-    if (email) profileUpdateData.email = email;
+    
+    // Safety check: Prevent changing own role or email to avoid lockouts/confusion
+    if (id === req.user.id) {
+        if (role && role !== 'admin') {
+            return res.status(400).json({ error: 'Admins cannot demote themselves. Contact another admin for role changes.' });
+        }
+    } else {
+        if (role) profileUpdateData.role = role;
+        if (email) profileUpdateData.email = email;
+    }
+    
+    if (content_limit !== undefined) {
+      console.log('Updating content_limit to:', content_limit);
+      profileUpdateData.content_limit = parseInt(content_limit) || 0;
+      profileUpdateData.content_count = 0; // Reset count on limit update/refresh
+    }
 
     if (Object.keys(profileUpdateData).length > 0) {
       const { error: profileError } = await supabaseAdmin
@@ -121,7 +132,10 @@ router.put('/users/:id', verifyAdmin, async (req, res) => {
         .update(profileUpdateData)
         .eq('id', id);
         
-      if (profileError) return res.status(500).json({ error: 'Failed to update user profile' });
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        return res.status(500).json({ error: 'Failed to update user profile. Check database logs for details.' });
+      }
     }
 
     res.json({ message: 'User updated successfully' });

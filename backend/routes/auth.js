@@ -1,14 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
-
-const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
-const supabaseKey = (process.env.SUPABASE_ANON_KEY || '').trim();
-const supabaseAdminKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-
-// Pre-initialize clients
-const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
-const supabaseAdmin = (supabaseUrl && supabaseAdminKey) ? createClient(supabaseUrl, supabaseAdminKey) : null;
+const { supabase, supabaseAdmin } = require('../config/supabase');
 
 // Login Route
 router.post('/login', async (req, res) => {
@@ -63,6 +55,26 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error during login' });
+  }
+});
+
+// Profile Route
+const { verifyToken } = require('../middleware/auth');
+router.get('/profile', verifyToken, async (req, res) => {
+  try {
+    const { data: profile, error } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error) {
+      return res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+
+    res.json(profile);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

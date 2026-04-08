@@ -1,14 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabaseAdminKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-const supabaseAdmin = createClient(supabaseUrl, supabaseAdminKey);
-
+const { supabaseAdmin } = require('../config/supabase');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 
 // 1. New Stats API (Admin Only)
