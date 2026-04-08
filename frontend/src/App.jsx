@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import SchemaMarkup from './components/SchemaMarkup';
+import { HelmetProvider } from 'react-helmet-async';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -42,28 +43,30 @@ function App() {
   );
 
   return (
-    <Router>
-      <SchemaMarkup />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage onLogin={loginUser} />} />
-        
-        {/* Dynamic Dashboard Selection */}
-        <Route 
-          path="/dashboard" 
-          element={
-            user ? (
-              user.role === 'admin' ? 
-              <AdminDashboard user={user} onLogout={logoutUser} /> : 
-              <TeacherDashboard user={user} onLogout={logoutUser} />
-            ) : <Navigate to="/login" />
-          } 
-        />
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
+    <HelmetProvider>
+      <Router>
+        <SchemaMarkup />
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage onLogin={loginUser} />} />
+          
+          {/* Dynamic Dashboard Selection */}
+          <Route 
+            path="/dashboard" 
+            element={
+              user ? (
+                user.role === 'admin' ? 
+                <AdminDashboard user={user} onLogout={logoutUser} /> : 
+                <TeacherDashboard user={user} onLogout={logoutUser} />
+              ) : <Navigate to="/login" />
+            } 
+          />
+  
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    </HelmetProvider>
   );
 }
 

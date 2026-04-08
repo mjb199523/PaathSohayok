@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Sparkles, BookOpen, Presentation, ClipboardList, PenTool, CheckSquare, Library, Copy, Download, RotateCcw, ChevronDown, CheckCircle, LayoutDashboard, Settings, HelpCircle, History, FileText, Loader2, Trash2, X, Cloud, Save, Timer, Lock, Search } from 'lucide-react';
@@ -8,10 +9,6 @@ import { API_URL } from '../config';
 const TeacherDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('generate'); // 'generate', 'history', 'settings'
-  
-  useEffect(() => {
-    document.title = "Generate Learning Content in Minutes | PaathSohayok";
-  }, []);
   const [history, setHistory] = useState([]);
   const [historyPage, setHistoryPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -381,7 +378,11 @@ const TeacherDashboard = ({ user, onLogout }) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-inter text-gray-900">
+    <div className="min-h-screen bg-[#F9FAFB] flex font-inter">
+      <Helmet>
+        <title>Generate Learning Content in Minutes | PaathSohayok</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-20 overflow-y-auto print:hidden no-print">
         <div className="p-6 border-b border-gray-100 flex items-center gap-4">

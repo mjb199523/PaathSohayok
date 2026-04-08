@@ -1,15 +1,15 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { FileText, Presentation, ClipboardList, CheckCircle, GraduationCap, ArrowRight, Library, Target, Award, Mail, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const LandingPage = () => {
-  useEffect(() => {
-    document.title = "PaathSohayok – AI Learning Content Generator for Teachers";
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-inter">
+      <Helmet>
+        <title>PaathSohayok – AI Learning Content Generator for Teachers</title>
+      </Helmet>
       {/* Sticky Navbar */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">

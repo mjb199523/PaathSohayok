@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Mail, Lock, LogIn, Library, XCircle, ChevronDown, UserCheck, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -19,21 +20,6 @@ const LoginPage = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const roleName = role === 'admin' ? 'Admin' : 'Teacher';
-    document.title = `${roleName} Login | PaathSohayok`;
-    
-    // Add noindex tag to login page
-    const metaRobots = document.createElement('meta');
-    metaRobots.name = 'robots';
-    metaRobots.content = 'noindex, nofollow';
-    document.head.appendChild(metaRobots);
-    
-    return () => {
-      document.head.removeChild(metaRobots);
-    };
-  }, [role]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -63,6 +49,10 @@ const LoginPage = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center py-12 px-6 font-inter overflow-y-auto">
+      <Helmet>
+        <title>{role === 'admin' ? 'Admin' : 'Teacher'} Login | PaathSohayok</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       {/* Standard Brand Logo Header */}
       <div className="flex items-center gap-4 mb-8">
           <div className="w-10 h-10 bg-pm-green rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-900/10">

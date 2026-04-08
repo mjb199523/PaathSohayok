@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, UserPlus, Trash2, Edit2, ShieldAlert, Users, Mail, Lock, User, CheckCircle2, LayoutDashboard, Settings, HelpCircle, X, Search, ChevronRight, FileText, DownloadCloud, Loader2, Library, Sparkles, BookOpen, ClipboardList, PenTool, CheckSquare, Download } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config';
 
 const AdminDashboard = ({ user, onLogout }) => {
-  useEffect(() => {
-    document.title = "Admin Dashboard | PaathSohayok";
-  }, []);
-
   const [activeTab, setActiveTab] = useState('users'); // 'users', 'creations', 'settings'
   const [users, setUsers] = useState([]);
   const [creations, setCreations] = useState([]);
@@ -255,7 +252,11 @@ const AdminDashboard = ({ user, onLogout }) => {
   const paginatedCreations = filteredCreations.slice((creationsPage - 1) * ITEMS_PER_PAGE, creationsPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-inter text-gray-900">
+    <div className="min-h-screen bg-[#F9FAFB] flex font-inter">
+      <Helmet>
+        <title>Admin Dashboard | PaathSohayok</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       {/* Fixed Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-20 overflow-y-auto">
         <div className="p-6 border-b border-gray-100 flex items-center gap-4">
