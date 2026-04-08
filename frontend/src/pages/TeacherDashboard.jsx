@@ -28,7 +28,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [resetTimer, setResetTimer] = useState(false);
   const [printData, setPrintData] = useState(null);
   const [historyDownloadingId, setHistoryDownloadingId] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(user);
   const contentRef = useRef();
 
   useEffect(() => {
@@ -460,28 +460,30 @@ const TeacherDashboard = ({ user, onLogout }) => {
                     </h3>
                     
                     <form onSubmit={handleGenerate} className="space-y-8">
-                        <div className="grid md:grid-cols-2 gap-8">
-                            <InputGroup label="Target Class" desc="Select student level">
-                                <div className="relative">
+                        <div className="grid md:grid-cols-2 gap-8 mb-8">
+                            <InputGroup label="Target Class" desc="SELECT STUDENT LEVEL">
+                                <div className="relative group">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-pm-green transition-colors"></div>
                                     <select 
-                                        className="pm-input appearance-none bg-gray-50/30 pl-4 py-3"
+                                        className="pm-input bg-gray-50/50 appearance-none pl-4 pr-10 py-3 text-gray-700"
                                         value={formData.className}
                                         onChange={(e) => setFormData({...formData, className: e.target.value})}
                                         required
                                     >
                                         <option value="">Select Grade</option>
                                         {[...Array(12)].map((_, i) => (
-                                            <option key={i+1} value={i+1}>Grade {i+1} (Class {i+1})</option>
+                                            <option key={i+1} value={`Class ${i+1}`}>Class {i+1}</option>
                                         ))}
+                                        <option value="Degree">Degree/College</option>
                                     </select>
-                                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                                 </div>
                             </InputGroup>
 
-                            <InputGroup label="Subject Division" desc="Core academic subject">
+                            <InputGroup label="Subject Division" desc="CORE ACADEMIC SUBJECT">
                                 <input 
                                     type="text"
-                                    className="pm-input bg-gray-50/30 py-3"
+                                    className="pm-input bg-gray-50/50 py-3"
                                     placeholder="e.g. Political Science"
                                     value={formData.subject}
                                     onChange={(e) => setFormData({...formData, subject: e.target.value})}
@@ -489,10 +491,10 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                 />
                             </InputGroup>
 
-                            <InputGroup label="Primary Topic" desc="The main chapter or concept">
+                            <InputGroup label="Primary Topic" desc="THE MAIN CHAPTER OR CONCEPT">
                                 <input 
-                                    type="text"
-                                    className="pm-input bg-gray-50/30 py-3"
+                                    type="text" 
+                                    className="pm-input bg-gray-50/50 py-3"
                                     placeholder="e.g. Fundamental Rights"
                                     value={formData.topic}
                                     onChange={(e) => setFormData({...formData, topic: e.target.value})}
@@ -533,49 +535,39 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                 ))}
                             </div>
 
-                                <div className="flex flex-col items-center gap-4 w-full md:w-auto">
+                                <div className="flex flex-col items-end gap-3 w-full md:w-auto">
                                     {(profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit) && (
-                                        <p className="text-rose-600 font-bold text-sm bg-rose-50 px-4 py-2 rounded-lg border border-rose-100 flex items-center gap-2">
-                                            <Lock className="w-4 h-4" />
+                                        <p className="text-[#E11D48] font-bold text-xs bg-[#FFF1F2] px-4 py-2.5 rounded-lg border border-[#FFE4E6] flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
+                                            <Lock className="w-3.5 h-3.5" />
                                             Contact the admin to increase your limit
                                         </p>
                                     )}
                                     <button 
                                         type="submit"
                                         disabled={loading || (lockExpiry && currentTime < lockExpiry) || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)}
-                                        className={`pm-button-primary px-10 py-5 flex flex-col items-center justify-center transition-all group shadow-2xl relative overflow-hidden transition-standard ${(lockExpiry || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)) ? 'bg-gray-400 cursor-not-allowed border-gray-100' : 'bg-pm-green border-pm-green hover:bg-green-700 active:scale-95'}`}
+                                        className={`pm-button-primary px-10 py-4.5 min-w-[280px] flex flex-col items-center justify-center transition-all group relative overflow-hidden transition-standard shadow-lg ${(lockExpiry || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)) ? 'bg-slate-300 cursor-not-allowed opacity-80 border-slate-200' : 'bg-pm-green border-pm-green hover:bg-green-700 active:scale-95'}`}
                                     >
                                         {loading ? (
                                             <div className="flex items-center gap-3">
-                                               <Loader2 className="w-6 h-6 animate-spin text-white" />
-                                               <span className="text-xl font-black text-white uppercase tracking-widest">Synthesizing...</span>
+                                               <Loader2 className="w-5 h-5 animate-spin text-white" />
+                                               <span className="text-lg font-black text-white uppercase tracking-widest">Synthesizing...</span>
                                             </div>
                                         ) : lockExpiry && currentTime < lockExpiry ? (
                                             <div className="flex flex-col items-center leading-none text-center">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Timer className="w-5 h-5 text-white/90 animate-pulse" />
-                                                    <span className="text-xl font-black text-white uppercase tracking-tight">AI Recovering...</span>
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <Timer className="w-4 h-4 text-white/90 animate-pulse" />
+                                                    <span className="text-lg font-black text-white uppercase tracking-tight">AI Recovering...</span>
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <div className="text-[14px] font-black text-white tracking-widest">
+                                                <div className="space-y-0.5">
+                                                    <div className="text-[12px] font-black text-white tracking-widest">
                                                         READY AT {new Date(lockExpiry).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })} IST
                                                     </div>
-                                                     <div className="text-[10px] font-bold text-white/60 uppercase tracking-[0.3em]">
-                                                         Wait {(() => {
-                                                             const diff = lockExpiry - currentTime;
-                                                             const hours = Math.floor(diff / 3600000);
-                                                             const mins = Math.floor((diff % 3600000) / 60000);
-                                                             const secs = Math.floor((diff % 60000) / 1000);
-                                                             if (hours > 0) return `${hours}h ${mins}m`;
-                                                             return `${mins}m ${secs}s`;
-                                                         })()}
-                                                     </div>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="flex items-center gap-4">
-                                                <Sparkles className="w-6 h-6 flex-shrink-0 text-white group-hover:rotate-12 transition-transform" />
-                                                <span className="text-xl font-black text-white uppercase tracking-widest">Compose Material</span>
+                                            <div className="flex items-center gap-3">
+                                                <Sparkles className="w-5 h-5 flex-shrink-0 text-white group-hover:rotate-12 transition-transform opacity-90" />
+                                                <span className="text-lg font-black text-white uppercase tracking-[0.15em] py-0.5">Compose Material</span>
                                             </div>
                                         )}
                                     </button>
@@ -583,6 +575,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                         </div>
                     </form>
                 </div>
+
 
                 <div className="space-y-12">
                     {loading ? (
