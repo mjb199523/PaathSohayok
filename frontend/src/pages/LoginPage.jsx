@@ -23,6 +23,16 @@ const LoginPage = ({ onLogin }) => {
   useEffect(() => {
     const roleName = role === 'admin' ? 'Admin' : 'Teacher';
     document.title = `${roleName} Login | PaathSohayok`;
+    
+    // Add noindex tag to login page
+    const metaRobots = document.createElement('meta');
+    metaRobots.name = 'robots';
+    metaRobots.content = 'noindex, nofollow';
+    document.head.appendChild(metaRobots);
+    
+    return () => {
+      document.head.removeChild(metaRobots);
+    };
   }, [role]);
 
   const handleLogin = async (e) => {

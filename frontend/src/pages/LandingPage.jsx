@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 
 const LandingPage = () => {
   useEffect(() => {
-    document.title = "Home | PaathSohayok";
+    document.title = "PaathSohayok – AI Learning Content Generator for Teachers";
   }, []);
 
   return (

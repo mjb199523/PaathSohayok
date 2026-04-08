@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
+import SchemaMarkup from './components/SchemaMarkup';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -42,6 +43,7 @@ function App() {
 
   return (
     <Router>
+      <SchemaMarkup />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage onLogin={loginUser} />} />

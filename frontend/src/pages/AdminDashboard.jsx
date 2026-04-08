@@ -5,6 +5,10 @@ import axios from 'axios';
 import { API_URL } from '../config';
 
 const AdminDashboard = ({ user, onLogout }) => {
+  useEffect(() => {
+    document.title = "Admin Dashboard | PaathSohayok";
+  }, []);
+
   const [activeTab, setActiveTab] = useState('users'); // 'users', 'creations', 'settings'
   const [users, setUsers] = useState([]);
   const [creations, setCreations] = useState([]);

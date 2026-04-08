@@ -8,6 +8,10 @@ import { API_URL } from '../config';
 const TeacherDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('generate'); // 'generate', 'history', 'settings'
+  
+  useEffect(() => {
+    document.title = "Generate Learning Content in Minutes | PaathSohayok";
+  }, []);
   const [history, setHistory] = useState([]);
   const [historyPage, setHistoryPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
