@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
+import PublicLessonPage from './pages/PublicLessonPage';
 import SchemaMarkup from './components/SchemaMarkup';
 import { HelmetProvider } from 'react-helmet-async';
 
@@ -49,6 +50,7 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage onLogin={loginUser} />} />
+          <Route path="/learn/:grade/:subject/:topic" element={<PublicLessonPage />} />
           
           {/* Dynamic Dashboard Selection */}
           <Route 

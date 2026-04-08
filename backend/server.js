@@ -16,12 +16,14 @@ const authRoutes = require('./routes/auth');
 const generatorRoutes = require('./routes/generator');
 const adminRoutes = require('./routes/admin');
 const creationRoutes = require('./routes/creations');
+const publicRoutes = require('./routes/public');
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/generate', generatorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/creations', creationRoutes);
+app.use('/api/public', publicRoutes);
 
 // Root
 app.get('/', (req, res) => {

@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/sitemap.xml", "destination": "https://paath-sohayok-backend.vercel.app/api/public/sitemap" },
+    { "source": "/robots.txt", "destination": "/robots.txt" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
