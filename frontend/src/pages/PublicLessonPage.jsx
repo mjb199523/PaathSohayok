@@ -106,7 +106,7 @@ const PublicLessonPage = () => {
     if (!lesson) return null;
 
     const pageTitle = `${lesson.class} ${lesson.subject} ${lesson.topic} Notes in ${lesson.language} | PaathSohayok`;
-    const pageDesc = `Free educational resources for ${lesson.class} ${lesson.subject}. Study ${lesson.topic} with AI-powered lesson plans, MCQs, and detailed explanations in ${lesson.language}.`;
+    const pageDesc = `Learn ${lesson.topic} chapter for ${lesson.class} ${lesson.subject} in ${lesson.language} medium with explanation, examples, and questions.`;
     const canonicalUrl = `https://www.paathsohayok.in/learn/${grade}/${subject}/${topic}`;
 
     const jsonLd = {
@@ -171,11 +171,8 @@ const PublicLessonPage = () => {
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date(lesson.created_at).toLocaleDateString()}</span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 leading-tight mb-6 font-heading">
-                        {lesson.topic}
+                        {lesson.topic} ({lesson.class} {lesson.subject})
                     </h1>
-                    <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
-                        Complete lesson resource for {lesson.class} {lesson.subject} educators and students in Assam. Derived from AI-powered learning architectures.
-                    </p>
                 </header>
 
                 {/* Content Panel */}
