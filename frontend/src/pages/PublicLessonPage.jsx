@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import axios from 'axios';
 import { API_URL } from '../config';
-import { Sparkles, BookOpen, ClipboardList, PenTool, CheckSquare, ChevronRight, Home, ArrowLeft, Loader2, Share2, Printer } from 'lucide-react';
+import { Sparkles, BookOpen, ClipboardList, PenTool, CheckSquare, ChevronRight, Home, ArrowLeft, Loader2, Share2, Printer, Library } from 'lucide-react';
 
 const PublicLessonPage = () => {
     const { grade, subject, topic } = useParams();
@@ -96,6 +96,8 @@ const PublicLessonPage = () => {
             <Link to="/" className="pm-button-primary px-8 py-3">Back to Homepage</Link>
         </div>
     );
+
+    if (!lesson) return null;
 
     const pageTitle = `${lesson.class} ${lesson.subject} ${lesson.topic} Notes in ${lesson.language} | PaathSohayok`;
     const pageDesc = `Free educational resources for ${lesson.class} ${lesson.subject}. Study ${lesson.topic} with AI-powered lesson plans, MCQs, and detailed explanations in ${lesson.language}.`;
