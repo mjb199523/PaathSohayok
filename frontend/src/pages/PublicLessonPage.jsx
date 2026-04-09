@@ -14,25 +14,40 @@ const PublicLessonPage = () => {
 
     useEffect(() => {
         const fetchContent = async () => {
+            console.log(`[SEO] Fetching content for: ${grade}/${subject}/${topic}`);
             try {
                 setLoading(true);
                 const response = await axios.get(`${API_URL}/api/public/lesson/${grade}/${subject}/${topic}`);
-                setLesson(response.data);
                 
-                // Fetch related
-                const relResponse = await axios.get(`${API_URL}/api/public/related/${subject}`);
-                setRelated(relResponse.data.filter(r => r.id !== response.data.id));
+                if (!response.data || response.data.error) {
+                    throw new Error('Lesson data empty or invalid');
+                }
+
+                setLesson(response.data);
+                console.log('[SEO] Lesson data received:', response.data.topic);
+                
+                // Fetch related (don't block the main lesson if this fails)
+                try {
+                    const relResponse = await axios.get(`${API_URL}/api/public/related/${subject}`);
+                    if (relResponse.data && Array.isArray(relResponse.data)) {
+                        setRelated(relResponse.data.filter(r => r.id !== response.data.id));
+                    }
+                } catch (relErr) {
+                    console.warn('[SEO] Failed to fetch related lessons:', relErr);
+                }
                 
                 setError(null);
             } catch (err) {
-                console.error('Fetch error:', err);
+                console.error('[SEO] Fetch error:', err);
                 setError('Lesson not found or currently unavailable.');
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchContent();
+        if (grade && subject && topic) {
+            fetchContent();
+        }
         window.scrollTo(0, 0);
     }, [grade, subject, topic]);
 
