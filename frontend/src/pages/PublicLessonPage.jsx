@@ -111,14 +111,13 @@ const PublicLessonPage = () => {
 
     const jsonLd = {
         "@context": "https://schema.org",
-        "@type": "LearningResource",
-        "headline": pageTitle,
-        "description": pageDesc,
-        "author": { "@type": "Organization", "name": "PaathSohayok" },
-        "url": canonicalUrl,
-        "learningResourceType": "Lesson Plan",
-        "educationalLevel": lesson.class,
-        "inLanguage": lesson.language === 'Assamese' ? 'as' : 'en'
+        "@type": "Article",
+        "headline": `${lesson.class} ${lesson.subject} ${lesson.topic} Notes`,
+        "description": `${lesson.language} medium lesson`,
+        "author": {
+            "@type": "Organization",
+            "name": "Paath Sohayok"
+        }
     };
 
     return (
