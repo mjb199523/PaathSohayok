@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Sparkles, BookOpen, Presentation, ClipboardList, PenTool, CheckSquare, Library, Copy, Download, RotateCcw, ChevronDown, CheckCircle, LayoutDashboard, Settings, HelpCircle, History, FileText, Loader2, Trash2, X, Cloud, Save, Timer, Lock, Search } from 'lucide-react';
+import { LogOut, Sparkles, BookOpen, Presentation, ClipboardList, PenTool, CheckSquare, Library, Copy, Download, RotateCcw, ChevronDown, CheckCircle, LayoutDashboard, Settings, HelpCircle, History, FileText, Loader2, Trash2, X, Cloud, Save, Timer, Lock, Search, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config';
 
@@ -108,7 +108,21 @@ const TeacherDashboard = ({ user, onLogout }) => {
       });
       
       setIsSaved(true);
-      if (manual) alert("Content synced to your creation cloud!");
+      if (manual) {
+          setResetTimer(true);
+          setTimeout(() => {
+              setResult(null);
+              setResetTimer(false);
+              setIsSaved(false);
+              setFormData({
+                  className: '',
+                  subject: '',
+                  topic: '',
+                  subTopic: '',
+                  language: 'English'
+              });
+          }, 2500);
+      }
     } catch (err) {
       console.error('Failed to save creation');
       if (manual) alert("Cloud synchronization failed. Please try again.");
@@ -608,6 +622,15 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                     <div className="flex justify-between items-center mb-6 pt-4 border-b border-gray-100 pb-6 print:hidden no-print">
                                         <h3 className="text-xl font-bold font-heading text-gray-900">Educator's Resource Panel</h3>
                                         <div className="flex gap-4">
+                                            <a 
+                                                 href={`/learn/${(formData.className || '').toLowerCase().replace(' ', '-')}/${(formData.subject || '').toLowerCase().replace(' ', '-')}/${(formData.topic || '').toLowerCase().replace(' ', '-')}`}
+                                                 target="_blank"
+                                                 rel="noopener noreferrer"
+                                                 className="pm-button-secondary py-2 flex items-center gap-2 group hover:border-pm-green/30"
+                                            >
+                                                <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-pm-green transition-colors" />
+                                                <span className="text-sm font-bold">Public Preview</span>
+                                            </a>
                                             <button 
                                                  onClick={() => handleCopy(result, 'all')}
                                                  className="pm-button-secondary py-2 flex items-center gap-2 group hover:border-pm-green/30"
@@ -761,6 +784,15 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                                         </td>
                                                         <td className="px-6 py-4 text-right pr-10 whitespace-nowrap">
                                                             <div className="flex items-center justify-end gap-3 transition-opacity">
+                                                                <a 
+                                                                    href={`/learn/${(item.class || '').toLowerCase().replace(' ', '-')}/${(item.subject || '').toLowerCase().replace(' ', '-')}/${(item.topic || '').toLowerCase().replace(' ', '-')}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="p-2.5 text-pm-green bg-green-50/50 hover:bg-pm-green hover:text-white rounded-xl transition-all shadow-sm border border-green-100/50"
+                                                                    title="View Public Link"
+                                                                >
+                                                                    <ExternalLink className="w-4 h-4" />
+                                                                </a>
                                                                 <button 
                                                                     onClick={() => handleDownloadFromHistory(item)}
                                                                     disabled={historyDownloadingId === item.id}
