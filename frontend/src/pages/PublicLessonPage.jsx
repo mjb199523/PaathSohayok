@@ -66,6 +66,12 @@ const PublicLessonPage = () => {
 
             if (body.length < 5) return null;
 
+            // Only show Information and Lesson Plan on public overview pages
+            const tl = rawParsedTitle.toLowerCase();
+            const allowedKeywords = ['information', 'lesson plan', 'তথ্য', 'পাঠ পৰিকল্পনা', 'overview'];
+            const isAllowed = allowedKeywords.some(kw => tl.includes(kw));
+            if (!isAllowed) return null;
+
             return (
                 <section key={idx} className="mb-12 scroll-mt-20">
                     <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3 border-b-4 border-pm-green/10 pb-2">

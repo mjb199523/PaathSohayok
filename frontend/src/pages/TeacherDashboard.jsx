@@ -147,7 +147,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const handleDownloadFromHistory = async (item) => {
       try {
           setHistoryDownloadingId(item.id);
-          const response = await axios.get(`${API_URL}/api/creations/${item.id}`, {
+          const response = await axios.get(`${API_URL}/api/creations/get/${item.id}`, {
               headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
           });
           
@@ -784,15 +784,6 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                                         </td>
                                                         <td className="px-6 py-4 text-right pr-10 whitespace-nowrap">
                                                             <div className="flex items-center justify-end gap-3 transition-opacity">
-                                                                <a 
-                                                                    href={`/learn/${(item.class || '').toLowerCase().replace(' ', '-')}/${(item.subject || '').toLowerCase().replace(' ', '-')}/${(item.topic || '').toLowerCase().replace(' ', '-')}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="p-2.5 text-pm-green bg-green-50/50 hover:bg-pm-green hover:text-white rounded-xl transition-all shadow-sm border border-green-100/50"
-                                                                    title="View Public Link"
-                                                                >
-                                                                    <ExternalLink className="w-4 h-4" />
-                                                                </a>
                                                                 <button 
                                                                     onClick={() => handleDownloadFromHistory(item)}
                                                                     disabled={historyDownloadingId === item.id}

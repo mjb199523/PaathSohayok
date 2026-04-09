@@ -54,7 +54,24 @@ router.get('/related/:subject', async (req, res) => {
     }
 });
 
-// 3. Dynamic Sitemap XML
+// 3. Fetch Recent Lessons for Home Page
+router.get('/recent', async (req, res) => {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from('creations')
+            .select('id, class, subject, topic, language, created_at')
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: false })
+            .limit(6);
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch recent' });
+    }
+});
+
+// 4. Dynamic Sitemap XML
 router.get('/sitemap', async (req, res) => {
     try {
         const { data, error } = await supabaseAdmin
