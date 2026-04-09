@@ -145,7 +145,7 @@ const PublicLessonPage = () => {
                         </div>
                         <span className="font-black text-xl font-heading text-gray-900 tracking-tight">PaathSohayok</span>
                     </Link>
-                    <Link to="/login" className="text-sm font-bold text-pm-green hover:underline">Teachers Login</Link>
+                    <Link to="/login?role=teacher" className="text-sm font-bold text-pm-green hover:underline">Teachers Login</Link>
                 </div>
             </header>
 
@@ -208,7 +208,7 @@ const PublicLessonPage = () => {
                         <Sparkles className="w-12 h-12 mx-auto mb-6 opacity-80" />
                         <h3 className="text-3xl font-black mb-4 font-heading">Are you a teacher?</h3>
                         <p className="max-w-md mx-auto mb-8 font-medium text-white/80">Generate your own unique lesson plans, MCQs, and worksheets in minutes with our AI Content Studio.</p>
-                        <Link to="/login" className="bg-white text-pm-green px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-50 transition-all inline-block shadow-lg">Start Generating Free</Link>
+                        <Link to="/login?role=teacher" className="bg-white text-pm-green px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-50 transition-all inline-block shadow-lg">Start Generating Free</Link>
                     </div>
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
                 </section>
