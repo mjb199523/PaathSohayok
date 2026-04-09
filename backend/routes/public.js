@@ -35,17 +35,19 @@ router.get('/lesson/:grade/:subject/:topic', async (req, res) => {
 });
 
 // 2. Fetch Related Lessons
-router.get('/related/:subject', async (req, res) => {
+router.get('/related/:grade/:subject', async (req, res) => {
     try {
-        const { subject } = req.params;
+        const { grade, subject } = req.params;
+        const dbGrade = grade.replace('class-', 'Class ').replace('-', ' ');
         const dbSubject = subject.replace('-', ' ');
 
         const { data, error } = await supabaseAdmin
             .from('creations')
             .select('id, class, subject, topic, language')
+            .ilike('class', `%${dbGrade}%`)
             .ilike('subject', `%${dbSubject}%`)
             .eq('is_deleted', false)
-            .limit(5);
+            .limit(10);
 
         if (error) throw error;
         res.json(data || []);

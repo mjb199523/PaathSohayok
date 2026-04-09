@@ -28,7 +28,7 @@ const PublicLessonPage = () => {
                 
                 // Fetch related (don't block the main lesson if this fails)
                 try {
-                    const relResponse = await axios.get(`${API_URL}/api/public/related/${subject}`);
+                    const relResponse = await axios.get(`${API_URL}/api/public/related/${grade}/${subject}`);
                     if (relResponse.data && Array.isArray(relResponse.data)) {
                         setRelated(relResponse.data.filter(r => r.id !== response.data.id));
                     }
@@ -186,19 +186,19 @@ const PublicLessonPage = () => {
                 {/* Internal Linking: Related Lessons */}
                 {related.length > 0 && (
                     <section className="mb-20 pt-16 border-t border-gray-100">
-                        <h3 className="text-2xl font-black text-gray-900 mb-8 font-heading">Related Topics</h3>
-                        <div className="grid sm:grid-cols-2 gap-6">
-                            {related.map(rel => (
-                                <Link 
-                                    key={rel.id}
-                                    to={`/learn/${rel.class.toLowerCase().replace(' ', '-')}/${rel.subject.toLowerCase().replace(' ', '-')}/${rel.topic.toLowerCase().replace(' ', '-')}`}
-                                    className="p-6 bg-white border border-gray-100 rounded-2xl hover:border-pm-green/30 hover:shadow-lg transition-all group"
-                                >
-                                    <p className="text-[10px] font-black text-pm-green uppercase mb-2 tracking-widest">{rel.class} • {rel.subject}</p>
-                                    <h4 className="font-bold text-gray-900 group-hover:text-pm-green transition-colors">{rel.topic}</h4>
-                                </Link>
-                            ))}
-                        </div>
+                        <h3 className="text-2xl font-black text-gray-900 mb-6 font-heading">Related Lessons:</h3>
+                        <ul className="list-disc pl-5 space-y-2 text-lg text-pm-green font-medium">
+                            {related.map(rel => {
+                                const internalPath = `/learn/${rel.class.toLowerCase().replace(' ', '-')}/${rel.subject.toLowerCase().replace(' ', '-')}/${rel.topic.toLowerCase().replace(' ', '-')}`;
+                                return (
+                                    <li key={rel.id}>
+                                        <Link to={internalPath} className="hover:underline">
+                                            {internalPath}
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
                     </section>
                 )}
 
