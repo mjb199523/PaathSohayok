@@ -173,6 +173,9 @@ const PublicLessonPage = () => {
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 leading-tight mb-6 font-heading">
                         {lesson.topic} ({lesson.class} {lesson.subject})
                     </h1>
+                    <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
+                        {pageDesc}
+                    </p>
                 </header>
 
                 {/* Content Panel */}
