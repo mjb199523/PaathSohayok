@@ -171,7 +171,7 @@ const PublicLessonPage = () => {
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date(lesson.created_at).toLocaleDateString()}</span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 leading-tight mb-6 font-heading">
-                        {lesson.topic} ({lesson.class} {lesson.subject})
+                        {lesson.topic} ({lesson.class} {lesson.subject}) | PaathSohayok
                     </h1>
                     <p className="text-lg text-gray-500 font-medium max-w-2xl leading-relaxed">
                         {pageDesc}
