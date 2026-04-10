@@ -167,7 +167,7 @@ const LandingPage = () => {
                         <span className="text-3xl font-black text-gray-900">₹200</span>
                     </p>
                     <p className="text-sm text-gray-500 mb-8 leading-relaxed font-medium">
-                        Generate upto 100 High Quality Learning Content or assessment by just uploading an image or PDF to explore our features.
+                        Generate upto 50 High Quality Learning Content or assessment by just uploading an image or PDF to explore our features.
                     </p>
                     <div className="mt-auto w-full text-center">
                         <a 
