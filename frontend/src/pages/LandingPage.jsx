@@ -69,7 +69,7 @@ const LandingPage = () => {
                     Transform your <span className="text-pm-green underline decoration-green-100 underline-offset-8">lesson planning</span> with intelligent AI.
                 </h2>
                 <p className="text-lg md:text-xl text-gray-500 mb-12 max-w-2xl mx-auto leading-relaxed">
-                    Generate lesson plans, PPT slides, assessments, and classroom activities instantly in English and Assamese. Generate Assessment by just uploading an image or PDF with upto 10 questions at a time.
+                    Generate lesson plans, homework, and classroom activities in Assamese and English - export as structured PDFs and create assessments from images or PDFs in under 2 minutes.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
