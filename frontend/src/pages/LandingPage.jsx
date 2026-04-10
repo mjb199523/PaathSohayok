@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { FileText, Presentation, ClipboardList, CheckCircle, GraduationCap, ArrowRight, Library, Target, Award, Mail, MessageCircle, ExternalLink, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Presentation, ClipboardList, CheckCircle, GraduationCap, ArrowRight, Library, Target, Award, Mail, MessageCircle, ExternalLink, BookOpen, ChevronLeft, ChevronRight, FileQuestion } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
@@ -69,7 +69,7 @@ const LandingPage = () => {
                     Transform your <span className="text-pm-green underline decoration-green-100 underline-offset-8">lesson planning</span> with intelligent AI.
                 </h2>
                 <p className="text-lg md:text-xl text-gray-500 mb-12 max-w-2xl mx-auto leading-relaxed">
-                    Generate lesson plans, PPT slides, assessments, and classroom activities instantly in English and Assamese.
+                    Generate lesson plans, PPT slides, assessments, and classroom activities instantly in English and Assamese. Generate Assessment by just uploading an image or PDF with upto 10 questions at a time.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -101,7 +101,7 @@ const LandingPage = () => {
                   <p className="text-gray-500">The first AI platform tailored specifically for teachers in Assam.</p>
              </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                 <FeatureCard 
                     icon={<Award className="text-pm-green" />} 
                     title="Bilingual Efficiency" 
@@ -111,6 +111,11 @@ const LandingPage = () => {
                     icon={<Target className="text-pm-green" />} 
                     title="Curriculum Focused" 
                     desc="Generate content that aligns perfectly with state and central educational standards for grades 1-12."
+                />
+                <FeatureCard 
+                    icon={<FileQuestion className="text-pm-green" />} 
+                    title="Assessment Generator" 
+                    desc="Upload any PDF or image and instantly generate targeted assessment questions with answer keys from its content."
                 />
                 <FeatureCard 
                     icon={<Presentation className="text-pm-green" />} 
@@ -138,7 +143,7 @@ const LandingPage = () => {
                     <h4 className="text-2xl font-bold font-heading mb-2">Basic Package</h4>
                     <p className="text-gray-400 font-bold mb-6 tracking-widest uppercase text-xs">Best for Trials</p>
                     <p className="text-sm text-gray-500 mb-8 leading-relaxed">
-                        Generate Free 3 High Quality Learning Content to explore our features.
+                        Generate Free 3 High Quality Learning Content or assessment by just uploading an image or PDF to explore our features.
                     </p>
                     <div className="mt-auto w-full text-center">
                         <Link to="/login?role=teacher" className="inline-block w-full py-3.5 bg-gray-900 text-white rounded-lg font-bold hover:bg-black transition-all text-center">

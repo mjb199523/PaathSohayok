@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Sparkles, BookOpen, Presentation, ClipboardList, PenTool, CheckSquare, Library, Copy, Download, RotateCcw, ChevronDown, CheckCircle, LayoutDashboard, Settings, HelpCircle, History, FileText, Loader2, Trash2, X, Cloud, Save, Timer, Lock, Search, ExternalLink } from 'lucide-react';
+import { LogOut, Sparkles, BookOpen, Presentation, ClipboardList, PenTool, CheckSquare, Library, Copy, Download, RotateCcw, ChevronDown, CheckCircle, LayoutDashboard, Settings, HelpCircle, History, FileText, Loader2, Trash2, X, Cloud, Save, Timer, Lock, Search, ExternalLink, Upload, FileQuestion } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config';
 
 const TeacherDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('generate'); // 'generate', 'history', 'settings'
+  const [activeTab, setActiveTab] = useState('generate'); // 'generate', 'assessment', 'history', 'settings'
   const [history, setHistory] = useState([]);
   const [historyPage, setHistoryPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -31,6 +31,17 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [profile, setProfile] = useState(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const contentRef = useRef();
+
+  // Assessment tab state
+  const [assessFile, setAssessFile] = useState(null);
+  const [assessQuestionCount, setAssessQuestionCount] = useState(5);
+  const [assessLanguage, setAssessLanguage] = useState('English');
+  const [assessLoading, setAssessLoading] = useState(false);
+  const [assessResult, setAssessResult] = useState(null);
+  const [assessSaving, setAssessSaving] = useState(false);
+  const [assessSaved, setAssessSaved] = useState(false);
+  const [assessResetTimer, setAssessResetTimer] = useState(false);
+  const assessFileRef = useRef();
 
   useEffect(() => {
     setHistoryPage(1);
@@ -129,6 +140,142 @@ const TeacherDashboard = ({ user, onLogout }) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // --- Assessment Handlers ---
+  const handleAssessGenerate = async (e) => {
+    if (e) e.preventDefault();
+    if (assessLoading || !assessFile) return;
+
+    setAssessLoading(true);
+    setAssessResult('');
+    setAssessSaved(false);
+
+    try {
+      const fd = new FormData();
+      fd.append('file', assessFile);
+      fd.append('questionCount', assessQuestionCount);
+      fd.append('language', assessLanguage);
+
+      const response = await fetch(`${API_URL}/api/assessment/generate`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('pm_token')}` },
+        body: fd
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        if (errData.resetAt) {
+            setLockExpiry(errData.resetAt);
+            localStorage.setItem('pm_lock_expiry', errData.resetAt.toString());
+        } else if (response.status === 429) {
+            const fallback = Date.now() + 65000;
+            setLockExpiry(fallback);
+            localStorage.setItem('pm_lock_expiry', fallback.toString());
+        }
+        throw new Error(errData.error || 'Assessment generation failed');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace('data: ', '').trim();
+            if (dataStr === '[DONE]') continue;
+            let parsed;
+            try {
+              parsed = JSON.parse(dataStr);
+            } catch (e) {
+              continue; // ignore small parse errors
+            }
+            
+            if (parsed.chunk) {
+              accumulated += parsed.chunk;
+              setAssessResult(accumulated);
+            } else if (parsed.error) {
+              if (parsed.resetAt) {
+                  setLockExpiry(parsed.resetAt);
+                  localStorage.setItem('pm_lock_expiry', parsed.resetAt.toString());
+              }
+              throw new Error(parsed.error);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Assessment failure:', err);
+      const errMsg = err.message || 'Assessment generation failed.';
+      alert(errMsg);
+      // Fallback lock ONLY if no specific resetAt was provided by backend
+      if (!err.resetAt && !lockExpiry && (errMsg.toLowerCase().includes('wait') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('limit'))) {
+          const newExpiry = Date.now() + 65000;
+          setLockExpiry(newExpiry);
+          localStorage.setItem('pm_lock_expiry', newExpiry.toString());
+      }
+    } finally {
+      setAssessLoading(false);
+      fetchProfile();
+    }
+  };
+
+  const saveAssessment = async () => {
+    if (!assessResult || !user?.id) return;
+    try {
+      setAssessSaving(true);
+      await axios.post(`${API_URL}/api/creations`, {
+        userId: user.id,
+        fileName: `Assessment_${assessFile?.name || 'Upload'}`,
+        content: assessResult,
+        className: 'Assessment',
+        subject: assessFile?.name || 'Uploaded File',
+        topic: `${assessQuestionCount} Questions`,
+        language: assessLanguage
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
+      });
+      setAssessSaved(true);
+      setAssessResetTimer(true);
+      setTimeout(() => {
+        setAssessResult(null);
+        setAssessResetTimer(false);
+        setAssessSaved(false);
+        setAssessFile(null);
+        setAssessQuestionCount(5);
+        if (assessFileRef.current) assessFileRef.current.value = '';
+      }, 2500);
+    } catch (err) {
+      console.error('Failed to save assessment');
+      alert('Failed to save assessment. Please try again.');
+    } finally {
+      setAssessSaving(false);
+    }
+  };
+
+  const handleAssessPrint = () => {
+    const trackDownload = async () => {
+      try {
+        await axios.post(`${API_URL}/api/creations/track-download`, null, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('pm_token')}` }
+        });
+      } catch (err) { console.error('Download tracking failed'); }
+    };
+    trackDownload();
+
+    setPrintData({
+      subject: 'Assessment',
+      topic: `${assessQuestionCount} Questions from ${assessFile?.name || 'Upload'}`,
+      class: 'Assessment',
+      language: assessLanguage,
+      content: assessResult
+    });
+    setTimeout(() => { window.print(); setPrintData(null); }, 500);
   };
 
   const deleteFromHistory = async (id) => {
@@ -307,20 +454,22 @@ const TeacherDashboard = ({ user, onLogout }) => {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '').trim();
             if (dataStr === '[DONE]') continue;
+            let parsed;
             try {
-              const parsed = JSON.parse(dataStr);
-              if (parsed.chunk) {
-                accumulatedContent += parsed.chunk;
-                setResult(accumulatedContent);
-              } else if (parsed.error) {
-                if (parsed.resetAt) {
-                    setLockExpiry(parsed.resetAt);
-                    localStorage.setItem('pm_lock_expiry', parsed.resetAt.toString());
-                }
-                throw new Error(parsed.error);
-              }
+              parsed = JSON.parse(dataStr);
             } catch (e) {
-              // Ignore small parse errors during stream
+              continue; // Ignore small parse errors during stream
+            }
+
+            if (parsed.chunk) {
+              accumulatedContent += parsed.chunk;
+              setResult(accumulatedContent);
+            } else if (parsed.error) {
+              if (parsed.resetAt) {
+                  setLockExpiry(parsed.resetAt);
+                  localStorage.setItem('pm_lock_expiry', parsed.resetAt.toString());
+              }
+              throw new Error(parsed.error);
             }
           }
         }
@@ -404,6 +553,12 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 className={`pm-sidebar-item w-full ${activeTab === 'generate' ? 'active' : ''}`}
             >
                 <Sparkles className="w-4 h-4" />Generate AI Content
+            </button>
+            <button 
+                onClick={() => setActiveTab('assessment')}
+                className={`pm-sidebar-item w-full ${activeTab === 'assessment' ? 'active' : ''}`}
+            >
+                <FileQuestion className="w-4 h-4" />Assessment
             </button>
             <button 
                 onClick={() => setActiveTab('history')}
@@ -830,6 +985,247 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {activeTab === 'assessment' && (
+                        <>
+                        <header className="mb-10 no-print">
+                            <h2 className="text-3xl font-bold font-heading text-gray-900 tracking-tight flex items-center gap-3">
+                                Assessment Generator
+                                <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-200 font-bold tracking-widest uppercase">NEW</span>
+                            </h2>
+                            <p className="text-gray-500 text-sm mt-1">Upload an image or PDF and generate assessment questions from its content.</p>
+                        </header>
+
+                        <div className="pm-card p-10 shadow-sm border-gray-100 bg-white mb-10 no-print">
+                            <h3 className="text-lg font-bold font-heading mb-8 flex items-center gap-2">
+                                <Upload className="w-5 h-5 text-pm-green" />
+                                Upload & Configure
+                            </h3>
+
+                            <form onSubmit={handleAssessGenerate} className="space-y-8">
+                                {/* File Upload */}
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-800 leading-tight">Upload File</label>
+                                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest mt-1">PDF OR IMAGE (PNG, JPG, WEBP) — MAX 10MB</p>
+                                    </div>
+                                    <div
+                                        className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer hover:border-pm-green/40 hover:bg-green-50/30 ${
+                                            assessFile ? 'border-pm-green bg-green-50/20' : 'border-gray-200 bg-gray-50/50'
+                                        }`}
+                                        onClick={() => assessFileRef.current?.click()}
+                                    >
+                                        <input
+                                            ref={assessFileRef}
+                                            type="file"
+                                            accept=".pdf,.png,.jpg,.jpeg,.webp"
+                                            className="hidden"
+                                            onChange={(e) => setAssessFile(e.target.files[0] || null)}
+                                        />
+                                        {assessFile ? (
+                                            <div className="flex items-center justify-center gap-3">
+                                                <FileText className="w-8 h-8 text-pm-green" />
+                                                <div className="text-left">
+                                                    <p className="font-bold text-gray-900 text-sm">{assessFile.name}</p>
+                                                    <p className="text-[10px] text-gray-400 font-semibold">{(assessFile.size / 1024).toFixed(1)} KB • Click to change</p>
+                                                </div>
+                                                <button type="button" onClick={(e) => { e.stopPropagation(); setAssessFile(null); if(assessFileRef.current) assessFileRef.current.value=''; }} className="ml-4 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <Upload className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                                                <p className="text-sm font-bold text-gray-500">Click to upload or drag & drop</p>
+                                                <p className="text-[10px] text-gray-400 mt-1 font-semibold">Supports PDF, PNG, JPG, WebP</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Question Count */}
+                                <div className="grid md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-800 leading-tight">Number of Questions</label>
+                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest mt-1">MAXIMUM 10 QUESTIONS PER GENERATION</p>
+                                        </div>
+                                        <div className="relative">
+                                            <select
+                                                className="pm-input bg-gray-50/50 appearance-none pl-4 pr-10 py-3 text-gray-700 w-full"
+                                                value={assessQuestionCount}
+                                                onChange={(e) => setAssessQuestionCount(parseInt(e.target.value))}
+                                            >
+                                                {[...Array(10)].map((_, i) => (
+                                                    <option key={i+1} value={i+1}>{i+1} Question{i > 0 ? 's' : ''}</option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Language Toggle + Submit */}
+                                <div className="pt-4 border-t border-gray-50 flex items-center justify-between gap-12">
+                                    <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+                                        {['English', 'Assamese'].map((lang) => (
+                                            <button
+                                                key={lang}
+                                                type="button"
+                                                onClick={() => setAssessLanguage(lang)}
+                                                className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${assessLanguage === lang ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                            >
+                                                {lang}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+                                        {(profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit) && (
+                                            <p className="text-[#E11D48] font-bold text-xs bg-[#FFF1F2] px-4 py-2.5 rounded-lg border border-[#FFE4E6] flex items-center gap-2">
+                                                <Lock className="w-3.5 h-3.5" />
+                                                Contact the admin to increase your limit
+                                            </p>
+                                        )}
+                                        <button
+                                            type="submit"
+                                            disabled={assessLoading || !assessFile || (lockExpiry && currentTime < lockExpiry) || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit)}
+                                            className={`pm-button-primary px-10 py-4.5 min-w-[280px] flex flex-col items-center justify-center transition-all group relative overflow-hidden transition-standard shadow-lg ${
+                                                (!assessFile || lockExpiry || (profile?.role !== 'admin' && profile?.content_count >= profile?.content_limit))
+                                                ? 'bg-slate-300 cursor-not-allowed opacity-80 border-slate-200'
+                                                : 'bg-pm-green border-pm-green hover:bg-green-700 active:scale-95'
+                                            }`}
+                                        >
+                                            {assessLoading ? (
+                                                <div className="flex items-center gap-3">
+                                                    <Loader2 className="w-5 h-5 animate-spin text-white" />
+                                                    <span className="text-lg font-black text-white uppercase tracking-widest">Generating...</span>
+                                                </div>
+                                            ) : lockExpiry && currentTime < lockExpiry ? (
+                                                <div className="flex flex-col items-center leading-none text-center">
+                                                    <div className="flex items-center gap-2 mb-1.5">
+                                                        <Timer className="w-4 h-4 text-white/90 animate-pulse" />
+                                                        <span className="text-lg font-black text-white uppercase tracking-tight">AI Recovering...</span>
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <div className="text-[12px] font-black text-white tracking-widest">
+                                                            READY AT {new Date(lockExpiry).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })} IST
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-3">
+                                                    <FileQuestion className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
+                                                    <span className="text-lg font-black text-white uppercase tracking-[0.15em] py-0.5">Generate Assessment</span>
+                                                </div>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Assessment Results Area */}
+                        <div className="space-y-12">
+                            {assessLoading ? (
+                                <div className="h-[400px] flex flex-col items-center justify-center text-center">
+                                    <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+                                        className="mb-6 p-4 bg-amber-50 rounded-full border border-amber-100"
+                                    >
+                                        <FileQuestion className="w-10 h-10 text-amber-500" />
+                                    </motion.div>
+                                    <h4 className="text-xl font-bold font-heading text-gray-900">Analyzing Content & Crafting Questions</h4>
+                                    <p className="text-gray-500 text-sm mt-3 max-w-xs leading-relaxed">Our AI is reading your document and generating targeted assessment questions.</p>
+                                </div>
+                            ) : assessResetTimer ? (
+                                <div className="h-[400px] flex flex-col items-center justify-center text-center animate-in fade-in duration-500">
+                                    <div className="mb-6 p-5 bg-pm-green/10 rounded-full border border-pm-green/20 relative">
+                                        <CheckCircle className="w-12 h-12 text-pm-green" />
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ repeat: Infinity, duration: 4, ease: 'linear' }}
+                                            className="absolute inset-0 rounded-full border-[3px] border-pm-green/30 border-t-pm-green"
+                                        ></motion.div>
+                                    </div>
+                                    <h4 className="text-2xl font-black font-heading text-gray-900">Assessment Saved & Synced!</h4>
+                                    <p className="text-gray-500 text-sm mt-3 max-w-xs leading-relaxed font-bold">Resetting workspace for next assessment...</p>
+                                </div>
+                            ) : assessResult ? (
+                                <div className="space-y-8 animate-in fade-in duration-500 scroll-mt-6">
+                                    {/* Action bar */}
+                                    <div className="flex justify-between items-center mb-6 pt-4 border-b border-gray-100 pb-6 print:hidden no-print">
+                                        <h3 className="text-xl font-bold font-heading text-gray-900">Generated Assessment</h3>
+                                        <div className="flex gap-4">
+                                            <button
+                                                onClick={() => { navigator.clipboard.writeText(assessResult); setCopied('assess'); setTimeout(() => setCopied(''), 2000); }}
+                                                className="pm-button-secondary py-2 flex items-center gap-2 group hover:border-pm-green/30"
+                                            >
+                                                {copied === 'assess' ? <CheckCircle className="w-4 h-4 text-pm-green" /> : <Copy className="w-4 h-4 text-gray-400 group-hover:text-pm-green transition-colors" />}
+                                                <span className="text-sm font-bold">Copy All</span>
+                                            </button>
+                                            <button
+                                                disabled={assessSaving || assessSaved}
+                                                onClick={saveAssessment}
+                                                className={`pm-button-secondary py-2 flex items-center gap-2 transition-all shadow-sm ${assessSaved ? 'bg-pm-green text-white border-pm-green' : 'bg-pm-green/5 text-pm-green border-pm-green/20 hover:bg-pm-green hover:text-white'}`}
+                                            >
+                                                {assessSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : assessSaved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                                                <span className="text-sm font-bold">{assessSaving ? 'Syncing...' : assessSaved ? 'Saved' : 'Save'}</span>
+                                            </button>
+                                            <button
+                                                onClick={handleAssessPrint}
+                                                className="pm-button-primary bg-indigo-600 hover:bg-indigo-700 py-2 flex items-center gap-2 shadow-lg shadow-indigo-900/10"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                <span className="text-sm font-bold text-white">Download PDF</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="pm-card p-12 bg-white shadow-xl ring-1 ring-gray-100 print:shadow-none print:ring-0">
+                                        <div className="border-b-2 border-amber-500/30 pb-8 mb-10 relative">
+                                            <div className="flex justify-between items-end relative z-10">
+                                                <div>
+                                                    <h1 className="text-2xl font-black font-heading text-amber-600 mb-1 uppercase tracking-tight">Assessment — {assessQuestionCount} Questions</h1>
+                                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Source: {assessFile?.name || 'Upload'} • {assessLanguage} Medium</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">PaathSohayok AI</p>
+                                                    <p className="text-[10px] text-gray-300 font-bold">{new Date().toLocaleDateString('en-IN')}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-sm bg-gray-50/50 p-8 rounded-3xl border border-gray-100 font-medium leading-8">
+                                            {assessResult}
+                                        </div>
+                                    </div>
+
+                                    <div className="text-center pt-16 no-print border-t border-gray-100">
+                                        <button
+                                            onClick={() => { setAssessResult(null); setAssessFile(null); if(assessFileRef.current) assessFileRef.current.value=''; }}
+                                            className="text-gray-400 font-black hover:text-pm-green flex items-center gap-3 mx-auto transition-colors group"
+                                        >
+                                            <RotateCcw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+                                            <span className="text-sm uppercase tracking-widest">New Assessment</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-[450px] flex flex-col items-center justify-center text-center p-12 pm-card border-dashed border-gray-200 bg-gray-50/30 rounded-[2.5rem] transition-all hover:bg-white hover:border-amber-200">
+                                    <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-xl shadow-amber-900/5 mb-8 border border-gray-100">
+                                        <FileQuestion className="w-10 h-10 text-gray-200" />
+                                    </div>
+                                    <h3 className="text-2xl font-black font-heading text-gray-400 leading-tight">Assessment Workspace Ready</h3>
+                                    <p className="text-gray-400 text-sm mt-4 max-w-sm font-medium leading-relaxed">
+                                        Upload an image or PDF above, set the number of questions, and click "Generate Assessment" to create targeted questions.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        </>
                     )}
 
                     {activeTab === 'settings' && (

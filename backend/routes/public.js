@@ -47,6 +47,7 @@ router.get('/related/:grade/:subject', async (req, res) => {
             .ilike('class', `%${dbGrade}%`)
             .ilike('subject', `%${dbSubject}%`)
             .eq('is_deleted', false)
+            .neq('class', 'Assessment')
             .limit(10);
 
         if (error) throw error;
@@ -63,6 +64,7 @@ router.get('/recent', async (req, res) => {
             .from('creations')
             .select('id, class, subject, topic, language, created_at')
             .eq('is_deleted', false)
+            .neq('class', 'Assessment')
             .order('created_at', { ascending: false })
             .limit(6);
 
@@ -80,6 +82,7 @@ router.get('/sitemap', async (req, res) => {
             .from('creations')
             .select('class, subject, topic, created_at')
             .eq('is_deleted', false)
+            .neq('class', 'Assessment')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
