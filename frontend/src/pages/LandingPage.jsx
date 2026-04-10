@@ -164,7 +164,7 @@ const LandingPage = () => {
                     <h4 className="text-2xl font-bold font-heading mb-2">Premium Package</h4>
                     <p className="text-pm-green font-bold mb-6 tracking-widest uppercase text-xs">For Dedicated Educators</p>
                     <p className="text-sm text-gray-500 mb-4 leading-relaxed">
-                        <span className="text-3xl font-black text-gray-900">₹500</span>
+                        <span className="text-3xl font-black text-gray-900">₹200</span>
                     </p>
                     <p className="text-sm text-gray-500 mb-8 leading-relaxed font-medium">
                         Generate upto 100 High Quality Learning Content or assessment by just uploading an image or PDF to explore our features.
