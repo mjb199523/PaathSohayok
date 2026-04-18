@@ -68,7 +68,18 @@ const SchemaMarkup = () => {
         }
       ]
     },
-    // Schema 5 — VideoObject (What is PaathSohayok)
+    // Schema 5 — VideoObject (How to Use PaathSohayok)
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoObject",
+      "name": "How to Use PaathSohayok – AI Tool for Teachers in Assam",
+      "description": "A step-by-step guide on using PaathSohayok to generate lesson plans, assessments, and slides in minutes.",
+      "thumbnailUrl": "https://img.youtube.com/vi/B5a4mFVWyY0/maxresdefault.jpg",
+      "uploadDate": "2024-01-01",
+      "contentUrl": "https://youtu.be/B5a4mFVWyY0",
+      "embedUrl": "https://www.youtube.com/embed/B5a4mFVWyY0"
+    },
+    // Schema 6 — VideoObject (What is PaathSohayok)
     {
       "@context": "https://schema.org",
       "@type": "VideoObject",

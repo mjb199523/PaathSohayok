@@ -6,13 +6,38 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
 
+const VIDEOS = [
+  {
+    id: 'B5a4mFVWyY0',
+    badge: '🎓 Tutorial',
+    heading: 'How to Use PaathSohayok',
+    subtitle: 'A step-by-step guide on using PaathSohayok to generate lesson plans, assessments, and slides in minutes.',
+    label: 'How to Use PaathSohayok',
+  },
+  {
+    id: 'hh7dfSezZNs',
+    badge: '📖 Introduction',
+    heading: 'What is PaathSohayok?',
+    subtitle: 'Learn how PaathSohayok helps teachers in Assam generate lesson plans, assessments, and classroom content using AI.',
+    label: 'What is PaathSohayok',
+  },
+];
+
 const LandingPage = () => {
   const [recentArticles, setRecentArticles] = useState([]);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const [playingVideos, setPlayingVideos] = useState({});
   const carouselRef = useRef(null);
 
+  const activeVideo = VIDEOS[activeVideoIndex];
+  const isVideoPlaying = !!playingVideos[activeVideo.id];
+
   const handlePlayVideo = useCallback(() => {
-    setIsVideoPlaying(true);
+    setPlayingVideos(prev => ({ ...prev, [VIDEOS[activeVideoIndex].id]: true }));
+  }, [activeVideoIndex]);
+
+  const handleVideoSwitch = useCallback((index) => {
+    setActiveVideoIndex(index);
   }, []);
 
   const scrollCarousel = (direction) => {
@@ -131,27 +156,39 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* What is PaathSohayok Section */}
+      {/* Video Section with Slider */}
       <section id="about-video" className="relative py-24 px-6 overflow-hidden bg-gradient-to-b from-gray-50/80 via-white to-white">
         {/* Subtle background glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-green-50/40 rounded-full blur-[100px] -z-0 pointer-events-none"></div>
 
         <div className="max-w-4xl mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            viewport={{ once: true, margin: '-80px' }}
-            className="text-center mb-12"
-          >
+          {/* Header — dynamic based on active video */}
+          <div className="text-center mb-10">
             <span className="inline-block px-4 py-1.5 rounded-full bg-green-50 text-pm-green text-xs font-bold border border-green-100 mb-5">
-              📖 Introduction
+              {activeVideo.badge}
             </span>
-            <h3 className="text-3xl md:text-4xl font-bold font-heading mb-4">What is PaathSohayok?</h3>
+            <h3 className="text-3xl md:text-4xl font-bold font-heading mb-4">{activeVideo.heading}</h3>
             <p className="text-gray-500 max-w-xl mx-auto leading-relaxed">
-              Learn how PaathSohayok helps teachers in Assam generate lesson plans, assessments, and classroom content using AI.
+              {activeVideo.subtitle}
             </p>
-          </motion.div>
+          </div>
+
+          {/* Video Tab Selectors */}
+          <div className="flex justify-center gap-3 mb-8">
+            {VIDEOS.map((video, index) => (
+              <button
+                key={video.id}
+                onClick={() => handleVideoSwitch(index)}
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
+                  activeVideoIndex === index
+                    ? 'bg-pm-green text-white shadow-lg shadow-green-200/50'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:border-pm-green/40 hover:text-pm-green'
+                }`}
+              >
+                {video.heading}
+              </button>
+            ))}
+          </div>
 
           {/* Watch Video Button */}
           {!isVideoPlaying && (
@@ -168,60 +205,100 @@ const LandingPage = () => {
             </div>
           )}
 
-          {/* Video Embed Container */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-            viewport={{ once: true }}
-            className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/10 border border-gray-200/60 bg-gray-900 aspect-video"
-          >
-            {!isVideoPlaying ? (
-              /* Thumbnail + Play Overlay */
+          {/* Video Embed Container with Navigation Arrows */}
+          <div className="relative group/video">
+            {/* Left Arrow */}
+            {activeVideoIndex > 0 && (
               <button
-                onClick={handlePlayVideo}
-                className="absolute inset-0 w-full h-full cursor-pointer group z-10"
-                aria-label="Play What is PaathSohayok video"
+                onClick={() => handleVideoSwitch(activeVideoIndex - 1)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-pm-green hover:border-pm-green/40 transition-all -ml-5 opacity-0 group-hover/video:opacity-100"
+                aria-label="Previous video"
               >
-                {/* YouTube Thumbnail */}
-                <img
-                  src="https://img.youtube.com/vi/hh7dfSezZNs/sddefault.jpg"
-                  alt="What is PaathSohayok - AI tool for teachers in Assam"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => { e.target.src = 'https://img.youtube.com/vi/hh7dfSezZNs/hqdefault.jpg'; }}
-                />
-                {/* Dark overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/50 group-hover:via-black/10 transition-all duration-300"></div>
-                
-                {/* Play Icon */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 md:w-24 md:h-24 bg-white/95 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:bg-white transition-all duration-300">
-                    <Play className="w-8 h-8 md:w-10 md:h-10 text-pm-green fill-pm-green ml-1" />
-                  </div>
-                </div>
-
-                {/* Bottom label */}
-                <div className="absolute bottom-5 left-5 flex items-center gap-2 text-white/90 text-sm font-semibold">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  What is PaathSohayok
-                </div>
+                <ChevronLeft className="w-5 h-5" />
               </button>
-            ) : (
-              /* Lazy-loaded YouTube iframe */
-              <iframe
-                width="100%"
-                height="100%"
-                src="https://www.youtube.com/embed/hh7dfSezZNs?autoplay=1&rel=0&modestbranding=1"
-                title="What is PaathSohayok - AI tool for teachers in Assam"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="absolute inset-0 w-full h-full"
-                loading="lazy"
-              ></iframe>
             )}
-          </motion.div>
+
+            <motion.div
+              key={activeVideo.id}
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/10 border border-gray-200/60 bg-gray-900 aspect-video"
+            >
+              {!isVideoPlaying ? (
+                /* Thumbnail + Play Overlay */
+                <button
+                  onClick={handlePlayVideo}
+                  className="absolute inset-0 w-full h-full cursor-pointer group z-10"
+                  aria-label={`Play ${activeVideo.label} video`}
+                >
+                  {/* YouTube Thumbnail */}
+                  <img
+                    src={`https://img.youtube.com/vi/${activeVideo.id}/sddefault.jpg`}
+                    alt={`${activeVideo.label} - AI tool for teachers in Assam`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => { e.target.src = `https://img.youtube.com/vi/${activeVideo.id}/hqdefault.jpg`; }}
+                  />
+                  {/* Dark overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/50 group-hover:via-black/10 transition-all duration-300"></div>
+                  
+                  {/* Play Icon */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-20 h-20 md:w-24 md:h-24 bg-white/95 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:bg-white transition-all duration-300">
+                      <Play className="w-8 h-8 md:w-10 md:h-10 text-pm-green fill-pm-green ml-1" />
+                    </div>
+                  </div>
+
+                  {/* Bottom label */}
+                  <div className="absolute bottom-5 left-5 flex items-center gap-2 text-white/90 text-sm font-semibold">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    {activeVideo.label}
+                  </div>
+                </button>
+              ) : (
+                /* Lazy-loaded YouTube iframe */
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${activeVideo.id}?autoplay=1&rel=0&modestbranding=1`}
+                  title={`${activeVideo.label} - AI tool for teachers in Assam`}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                  loading="lazy"
+                ></iframe>
+              )}
+            </motion.div>
+
+            {/* Right Arrow */}
+            {activeVideoIndex < VIDEOS.length - 1 && (
+              <button
+                onClick={() => handleVideoSwitch(activeVideoIndex + 1)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-11 h-11 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-pm-green hover:border-pm-green/40 transition-all -mr-5 opacity-0 group-hover/video:opacity-100"
+                aria-label="Next video"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Slider Dots */}
+          <div className="flex justify-center gap-2.5 mt-6">
+            {VIDEOS.map((video, index) => (
+              <button
+                key={video.id}
+                onClick={() => handleVideoSwitch(index)}
+                className={`rounded-full transition-all duration-300 ${
+                  activeVideoIndex === index
+                    ? 'w-8 h-2.5 bg-pm-green'
+                    : 'w-2.5 h-2.5 bg-gray-300 hover:bg-gray-400'
+                }`}
+                aria-label={`Switch to ${video.heading}`}
+              />
+            ))}
+          </div>
 
           {/* SEO Content Block */}
           <motion.div
