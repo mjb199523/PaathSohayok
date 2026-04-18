@@ -67,6 +67,17 @@ const SchemaMarkup = () => {
           }
         }
       ]
+    },
+    // Schema 5 — VideoObject (What is PaathSohayok)
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoObject",
+      "name": "What is PaathSohayok – AI Tool for Teachers in Assam",
+      "description": "Learn what PaathSohayok is and how it helps teachers in Assam generate lesson plans, assessments, and classroom content with AI.",
+      "thumbnailUrl": "https://img.youtube.com/vi/hh7dfSezZNs/maxresdefault.jpg",
+      "uploadDate": "2024-01-01",
+      "contentUrl": "https://youtu.be/hh7dfSezZNs",
+      "embedUrl": "https://www.youtube.com/embed/hh7dfSezZNs"
     }
   ];
 

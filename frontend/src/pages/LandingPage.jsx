@@ -1,14 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { FileText, Presentation, ClipboardList, CheckCircle, GraduationCap, ArrowRight, Library, Target, Award, Mail, MessageCircle, ExternalLink, BookOpen, ChevronLeft, ChevronRight, FileQuestion } from 'lucide-react';
+import { FileText, Presentation, ClipboardList, CheckCircle, GraduationCap, ArrowRight, Library, Target, Award, Mail, MessageCircle, ExternalLink, BookOpen, ChevronLeft, ChevronRight, FileQuestion, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
 
 const LandingPage = () => {
   const [recentArticles, setRecentArticles] = useState([]);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const carouselRef = useRef(null);
+
+  const handlePlayVideo = useCallback(() => {
+    setIsVideoPlaying(true);
+  }, []);
 
   const scrollCarousel = (direction) => {
       if (!carouselRef.current) return;
@@ -30,7 +35,7 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-inter">
       <Helmet>
-        <title>PaathSohayok – AI Learning Content Generator for Teachers</title>
+        <title>PaathSohayok – AI Tool for Teachers in Assam | Lesson Plans & Assessments</title>
       </Helmet>
       {/* Sticky Navbar */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4">
@@ -123,6 +128,127 @@ const LandingPage = () => {
                     desc="Receive structured content categorized into slides, ready to be copied into your presentations."
                 />
             </div>
+        </div>
+      </section>
+
+      {/* What is PaathSohayok Section */}
+      <section id="about-video" className="relative py-24 px-6 overflow-hidden bg-gradient-to-b from-gray-50/80 via-white to-white">
+        {/* Subtle background glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-green-50/40 rounded-full blur-[100px] -z-0 pointer-events-none"></div>
+
+        <div className="max-w-4xl mx-auto relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            viewport={{ once: true, margin: '-80px' }}
+            className="text-center mb-12"
+          >
+            <span className="inline-block px-4 py-1.5 rounded-full bg-green-50 text-pm-green text-xs font-bold border border-green-100 mb-5">
+              📖 Introduction
+            </span>
+            <h3 className="text-3xl md:text-4xl font-bold font-heading mb-4">What is PaathSohayok?</h3>
+            <p className="text-gray-500 max-w-xl mx-auto leading-relaxed">
+              Learn how PaathSohayok helps teachers in Assam generate lesson plans, assessments, and classroom content using AI.
+            </p>
+          </motion.div>
+
+          {/* Watch Video Button */}
+          {!isVideoPlaying && (
+            <div className="flex justify-center mb-8">
+              <button
+                onClick={handlePlayVideo}
+                className="group inline-flex items-center gap-3 px-7 py-3.5 bg-pm-green text-white font-bold rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 hover:shadow-xl hover:shadow-green-200/60 transition-all active:scale-95"
+              >
+                <span className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                  <Play className="w-4 h-4 fill-white" />
+                </span>
+                Watch Video
+              </button>
+            </div>
+          )}
+
+          {/* Video Embed Container */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            viewport={{ once: true }}
+            className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/10 border border-gray-200/60 bg-gray-900 aspect-video"
+          >
+            {!isVideoPlaying ? (
+              /* Thumbnail + Play Overlay */
+              <button
+                onClick={handlePlayVideo}
+                className="absolute inset-0 w-full h-full cursor-pointer group z-10"
+                aria-label="Play What is PaathSohayok video"
+              >
+                {/* YouTube Thumbnail */}
+                <img
+                  src="https://img.youtube.com/vi/hh7dfSezZNs/sddefault.jpg"
+                  alt="What is PaathSohayok - AI tool for teachers in Assam"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => { e.target.src = 'https://img.youtube.com/vi/hh7dfSezZNs/hqdefault.jpg'; }}
+                />
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/50 group-hover:via-black/10 transition-all duration-300"></div>
+                
+                {/* Play Icon */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-20 h-20 md:w-24 md:h-24 bg-white/95 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:bg-white transition-all duration-300">
+                    <Play className="w-8 h-8 md:w-10 md:h-10 text-pm-green fill-pm-green ml-1" />
+                  </div>
+                </div>
+
+                {/* Bottom label */}
+                <div className="absolute bottom-5 left-5 flex items-center gap-2 text-white/90 text-sm font-semibold">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  What is PaathSohayok
+                </div>
+              </button>
+            ) : (
+              /* Lazy-loaded YouTube iframe */
+              <iframe
+                width="100%"
+                height="100%"
+                src="https://www.youtube.com/embed/hh7dfSezZNs?autoplay=1&rel=0&modestbranding=1"
+                title="What is PaathSohayok - AI tool for teachers in Assam"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full"
+                loading="lazy"
+              ></iframe>
+            )}
+          </motion.div>
+
+          {/* SEO Content Block */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            viewport={{ once: true }}
+            className="mt-14 max-w-3xl mx-auto text-center"
+          >
+            <h4 className="text-2xl font-bold font-heading mb-4 text-gray-900">
+              AI-Powered Teaching Assistant for Assam
+            </h4>
+            <p className="text-gray-500 leading-relaxed text-base">
+              PaathSohayok is designed specifically for educators in Assam, enabling them to
+              create curriculum-aligned lesson plans, generate assessments from PDFs,
+              and produce presentation-ready slides instantly. With bilingual support in
+              Assamese and English, it simplifies teaching workflows and enhances
+              classroom productivity.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <span className="px-4 py-2 bg-green-50 text-pm-green rounded-full text-xs font-bold border border-green-100">📚 Lesson Plans</span>
+              <span className="px-4 py-2 bg-green-50 text-pm-green rounded-full text-xs font-bold border border-green-100">📝 Assessments</span>
+              <span className="px-4 py-2 bg-green-50 text-pm-green rounded-full text-xs font-bold border border-green-100">📊 Slides</span>
+              <span className="px-4 py-2 bg-green-50 text-pm-green rounded-full text-xs font-bold border border-green-100">🌐 Bilingual</span>
+              <span className="px-4 py-2 bg-green-50 text-pm-green rounded-full text-xs font-bold border border-green-100">⚡ Under 2 min</span>
+            </div>
+          </motion.div>
         </div>
       </section>
 
