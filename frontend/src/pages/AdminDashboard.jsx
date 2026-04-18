@@ -257,8 +257,8 @@ const AdminDashboard = ({ user, onLogout }) => {
         <title>Admin Dashboard | PaathSohayok</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
-      {/* Fixed Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-20 overflow-y-auto">
+      {/* Fixed Sidebar (Desktop) */}
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed h-full z-20 overflow-y-auto">
         <div className="p-6 border-b border-gray-100 flex items-center gap-4">
             <div className="w-9 h-9 bg-pm-green rounded-lg flex items-center justify-center text-white shadow-sm">
                 <Library className="w-5 h-5 flex-shrink-0" />
@@ -314,12 +314,43 @@ const AdminDashboard = ({ user, onLogout }) => {
         </div>
       </aside>
 
+      {/* Mobile Top Header (Logo & Logout) */}
+      <div className="md:hidden fixed top-0 w-full bg-white border-b border-gray-200 z-30 px-4 py-3 flex justify-between items-center shadow-sm">
+          <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-pm-green rounded-lg flex items-center justify-center text-white shadow-sm">
+                  <Library className="w-4 h-4" />
+              </div>
+              <span className="font-bold text-lg font-heading text-gray-900 leading-none">PaathSohayok</span>
+          </div>
+          <button onClick={onLogout} className="p-2 text-rose-600 rounded-lg bg-rose-50 hover:bg-rose-100 transition-colors">
+              <LogOut className="w-4 h-4" />
+          </button>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 z-30 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <div className="flex justify-around items-center h-16">
+              <button onClick={() => setActiveTab('users')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'users' ? 'text-pm-green' : 'text-gray-400'}`}>
+                  <Users className="w-5 h-5" />
+                  <span className="text-[10px] font-bold">Users</span>
+              </button>
+              <button onClick={() => setActiveTab('creations')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'creations' ? 'text-pm-green' : 'text-gray-400'}`}>
+                  <FileText className="w-5 h-5" />
+                  <span className="text-[10px] font-bold">Files</span>
+              </button>
+              <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'settings' ? 'text-pm-green' : 'text-gray-400'}`}>
+                  <Settings className="w-5 h-5" />
+                  <span className="text-[10px] font-bold">Settings</span>
+              </button>
+          </div>
+      </div>
+
       {/* Main Content Area */}
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 pb-24 md:pt-8 md:pb-8 w-full max-w-[100vw] md:max-w-none overflow-x-hidden">
         <div className="max-w-7xl mx-auto">
             {activeTab === 'users' && (
                 <>
-                    <header className="flex justify-between items-center mb-10">
+                    <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-10">
                         <div>
                            <h2 className="text-3xl font-bold font-heading text-gray-900 tracking-tight tracking-tight">User Management</h2>
                            <p className="text-gray-500 text-sm mt-1">Manage school accounts and access credentials.</p>
@@ -348,14 +379,14 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                     {/* Table Container */}
                     <div className="pm-card shadow-sm border-gray-100 bg-white">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/20">
+                        <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50/20">
                             <h3 className="text-lg font-bold font-heading">Teaching Faculty</h3>
                             <div className="relative">
                                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input 
                                     type="text"
                                     placeholder="Search faculty..."
-                                    className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-pm-green/20 focus:border-pm-green outline-none transition-all w-64"
+                                    className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-pm-green/20 focus:border-pm-green outline-none transition-all w-full md:w-64"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -468,7 +499,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                     {/* Creations Table */}
                     <div className="pm-card shadow-sm border-gray-100 bg-white">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/20">
+                        <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50/20">
                             <h3 className="text-lg font-bold font-heading">Global creation History</h3>
                             <div className="relative">
                                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

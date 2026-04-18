@@ -535,8 +535,8 @@ const TeacherDashboard = ({ user, onLogout }) => {
         <title>Generate Learning Content in Minutes | PaathSohayok</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-20 overflow-y-auto print:hidden no-print">
+      {/* Sidebar (Desktop) */}
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed h-full z-20 overflow-y-auto print:hidden no-print">
         <div className="p-6 border-b border-gray-100 flex items-center gap-4">
             <div className="w-9 h-9 bg-pm-green rounded-lg flex items-center justify-center text-white shadow-sm">
                 <Library className="w-5 h-5 flex-shrink-0" />
@@ -598,8 +598,43 @@ const TeacherDashboard = ({ user, onLogout }) => {
         </div>
       </aside>
 
+      {/* Mobile Top Header */}
+      <div className="md:hidden fixed top-0 w-full bg-white border-b border-gray-200 z-30 px-4 py-3 flex justify-between items-center shadow-sm">
+          <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-pm-green rounded-lg flex items-center justify-center text-white shadow-sm">
+                  <Library className="w-4 h-4" />
+              </div>
+              <span className="font-bold text-lg font-heading text-gray-900 leading-none">PaathSohayok</span>
+          </div>
+          <button onClick={handleLogOut} className="p-2 text-rose-600 rounded-lg bg-rose-50 hover:bg-rose-100 transition-colors">
+              <LogOut className="w-4 h-4" />
+          </button>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 z-30 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <div className="flex justify-around items-center h-16">
+              <button onClick={() => setActiveTab('generate')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'generate' ? 'text-pm-green' : 'text-gray-400'}`}>
+                  <Sparkles className="w-5 h-5" />
+                  <span className="text-[10px] font-bold truncate">Generate</span>
+              </button>
+              <button onClick={() => setActiveTab('assessment')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'assessment' ? 'text-pm-green' : 'text-gray-400'}`}>
+                  <FileQuestion className="w-5 h-5" />
+                  <span className="text-[10px] font-bold truncate">Assessment</span>
+              </button>
+              <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'history' ? 'text-pm-green' : 'text-gray-400'}`}>
+                  <History className="w-5 h-5" />
+                  <span className="text-[10px] font-bold truncate">History</span>
+              </button>
+              <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${activeTab === 'settings' ? 'text-pm-green' : 'text-gray-400'}`}>
+                  <Settings className="w-5 h-5" />
+                  <span className="text-[10px] font-bold truncate">Settings</span>
+              </button>
+          </div>
+      </div>
+
       {/* Main Content Area */}
-      <main className="flex-1 ml-64 p-8 print:ml-0 print:p-0">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 pb-24 md:pt-8 md:pb-8 print:col-span-full print:m-0 print:p-0 w-full max-w-[100vw] md:max-w-none overflow-x-hidden">
         <div className="max-w-5xl mx-auto pb-20">
             {!profileLoaded ? (
                 <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
@@ -683,7 +718,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                                     </InputGroup>
                                 </div>
 
-                                <div className="pt-4 border-t border-gray-50 flex items-center justify-between gap-12">
+                                <div className="pt-4 border-t border-gray-50 flex flex-col md:flex-row items-center md:justify-between gap-6 md:gap-12">
                                     <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
                                         {['English', 'Assamese'].map((lang) => (
                                             <button 
@@ -774,9 +809,9 @@ const TeacherDashboard = ({ user, onLogout }) => {
                             ) : result ? (
                                 <div ref={contentRef} className="space-y-8 animate-in fade-in duration-500 scroll-mt-6">
                                     {/* Resource Header Panel */}
-                                    <div className="flex justify-between items-center mb-6 pt-4 border-b border-gray-100 pb-6 print:hidden no-print">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pt-4 border-b border-gray-100 pb-6 gap-4 print:hidden no-print">
                                         <h3 className="text-xl font-bold font-heading text-gray-900">Educator's Resource Panel</h3>
-                                        <div className="flex gap-4">
+                                        <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                                             <a 
                                                  href={`/learn/${(formData.className || '').toLowerCase().replace(' ', '-')}/${(formData.subject || '').toLowerCase().replace(' ', '-')}/${(formData.topic || '').toLowerCase().replace(' ', '-')}`}
                                                  target="_blank"

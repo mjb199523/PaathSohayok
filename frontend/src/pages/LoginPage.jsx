@@ -69,7 +69,7 @@ const LoginPage = ({ onLogin }) => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <div className={`pm-card ${error ? 'p-8' : 'p-10'} shadow-medium border-gray-100 transition-all duration-300`}>
+        <div className={`pm-card ${error ? 'p-6 md:p-8' : 'p-6 md:p-10'} shadow-medium border-gray-100 transition-all duration-300`}>
             <div className={`${error ? 'mb-6' : 'mb-10'} text-center transition-all duration-300`}>
                 <h3 className="text-2xl font-bold text-gray-900 font-heading">Sign in to your account</h3>
                 <p className="text-gray-500 mt-2 text-sm tracking-tight capitalize">Enter your details to access the platform</p>
