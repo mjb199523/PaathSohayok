@@ -174,7 +174,7 @@ const LandingPage = () => {
           </div>
 
           {/* Video Tab Selectors */}
-          <div className="flex justify-center gap-3 mb-8">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mb-8 w-full px-4">
             {VIDEOS.map((video, index) => (
               <button
                 key={video.id}
