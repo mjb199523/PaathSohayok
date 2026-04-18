@@ -190,20 +190,6 @@ const LandingPage = () => {
             ))}
           </div>
 
-          {/* Watch Video Button */}
-          {!isVideoPlaying && (
-            <div className="flex justify-center mb-8">
-              <button
-                onClick={handlePlayVideo}
-                className="group inline-flex items-center gap-3 px-7 py-3.5 bg-pm-green text-white font-bold rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 hover:shadow-xl hover:shadow-green-200/60 transition-all active:scale-95"
-              >
-                <span className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                  <Play className="w-4 h-4 fill-white" />
-                </span>
-                Watch Video
-              </button>
-            </div>
-          )}
 
           {/* Video Embed Container with Navigation Arrows */}
           <div className="relative group/video">
