@@ -28,7 +28,7 @@ const BLOG_POSTS = [
     id: 1,
     title: "AI for Teachers in Assam: Save 5+ Hours Every Week",
     description: "Learn how AI automates lesson planning and assessments, saving valuable time.",
-    link: "/blog/blog1.html",
+    link: "/blog/ai-for-teachers-assam",
     date: "19 Apr 2026",
     category: "AI & Education",
     readTime: "3 min read"
@@ -37,7 +37,7 @@ const BLOG_POSTS = [
     id: 2,
     title: "How to Create Lesson Plans in Minutes Using AI",
     description: "Step-by-step guide to generating lesson plans instantly.",
-    link: "/blog/blog2.html",
+    link: "/blog/create-lesson-plans-minutes-ai",
     date: "18 Apr 2026",
     category: "Tutorial",
     readTime: "2 min read"
@@ -46,7 +46,7 @@ const BLOG_POSTS = [
     id: 3,
     title: "Convert PDF to Question Paper Instantly (Step-by-Step)",
     description: "Create AI-generated assessments directly from any PDF.",
-    link: "/blog/blog3.html",
+    link: "/blog/convert-pdf-question-paper-instantly",
     date: "17 Apr 2026",
     category: "Assessments",
     readTime: "4 min read"
@@ -55,7 +55,7 @@ const BLOG_POSTS = [
     id: 4,
     title: "Best Tools for Teachers in Assam (2026 Guide)",
     description: "Top essential digital tools for educators for efficient teaching.",
-    link: "/blog/blog4.html",
+    link: "/blog/best-tools-teachers-assam-2026",
     date: "16 Apr 2026",
     category: "Resources",
     readTime: "5 min read"
@@ -64,7 +64,7 @@ const BLOG_POSTS = [
     id: 5,
     title: "How to Generate Assessments Automatically Using AI",
     description: "Quick and easy assessment creation for focused testing.",
-    link: "/blog/blog5.html",
+    link: "/blog/generate-assessments-automatically-ai",
     date: "15 Apr 2026",
     category: "Tutorial",
     readTime: "3 min read"
@@ -528,7 +528,7 @@ const LandingPage = () => {
             </div>
             
             <div className="mt-8 text-center">
-                 <a href="/blog/index.html" className="inline-flex items-center gap-2 text-pm-green font-bold hover:underline">
+                 <a href="/blog" className="inline-flex items-center gap-2 text-pm-green font-bold hover:underline">
                       View All Blogs <ArrowRight className="w-4 h-4" />
                  </a>
             </div>
