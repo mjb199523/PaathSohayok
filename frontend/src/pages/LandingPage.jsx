@@ -23,11 +23,60 @@ const VIDEOS = [
   },
 ];
 
+const BLOG_POSTS = [
+  {
+    id: 1,
+    title: "AI for Teachers in Assam: Save 5+ Hours Every Week",
+    description: "Learn how AI automates lesson planning and assessments, saving valuable time.",
+    link: "/blog/blog1.html",
+    date: "19 Apr 2026",
+    category: "AI & Education",
+    readTime: "3 min read"
+  },
+  {
+    id: 2,
+    title: "How to Create Lesson Plans in Minutes Using AI",
+    description: "Step-by-step guide to generating lesson plans instantly.",
+    link: "/blog/blog2.html",
+    date: "18 Apr 2026",
+    category: "Tutorial",
+    readTime: "2 min read"
+  },
+  {
+    id: 3,
+    title: "Convert PDF to Question Paper Instantly (Step-by-Step)",
+    description: "Create AI-generated assessments directly from any PDF.",
+    link: "/blog/blog3.html",
+    date: "17 Apr 2026",
+    category: "Assessments",
+    readTime: "4 min read"
+  },
+  {
+    id: 4,
+    title: "Best Tools for Teachers in Assam (2026 Guide)",
+    description: "Top essential digital tools for educators for efficient teaching.",
+    link: "/blog/blog4.html",
+    date: "16 Apr 2026",
+    category: "Resources",
+    readTime: "5 min read"
+  },
+  {
+    id: 5,
+    title: "How to Generate Assessments Automatically Using AI",
+    description: "Quick and easy assessment creation for focused testing.",
+    link: "/blog/blog5.html",
+    date: "15 Apr 2026",
+    category: "Tutorial",
+    readTime: "3 min read"
+  }
+];
+
 const LandingPage = () => {
   const [recentArticles, setRecentArticles] = useState([]);
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const [playingVideos, setPlayingVideos] = useState({});
   const carouselRef = useRef(null);
+  const blogCarouselRef = useRef(null);
 
   const activeVideo = VIDEOS[activeVideoIndex];
   const isVideoPlaying = !!playingVideos[activeVideo.id];
@@ -44,6 +93,12 @@ const LandingPage = () => {
       if (!carouselRef.current) return;
       const scrollAmount = 360;
       carouselRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+  };
+
+  const scrollBlogCarousel = (direction) => {
+      if (!blogCarouselRef.current) return;
+      const scrollAmount = 360;
+      blogCarouselRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -427,6 +482,58 @@ const LandingPage = () => {
             </div>
           </section>
       )}
+
+      {/* Blogs Section (SEO) */}
+      <section className="bg-gray-50/50 py-24 px-6 border-b border-gray-100">
+        <div className="max-w-7xl mx-auto">
+             <div className="text-center mb-16">
+                  <h3 className="text-3xl font-bold font-heading mb-4">Latest Insights & Resources</h3>
+                  <p className="text-gray-500">Discover tips, tools, and guides to enhance your teaching experience with AI.</p>
+             </div>
+
+            <div className="relative group/blogcarousel">
+                {/* Left Arrow */}
+                <button onClick={() => scrollBlogCarousel('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-200 rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-pm-green hover:border-pm-green/40 transition-all -ml-5 opacity-0 group-hover/blogcarousel:opacity-100">
+                    <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                <div ref={blogCarouselRef} className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden -mx-6 px-6 lg:mx-0 lg:px-0">
+                    {BLOG_POSTS.map((post) => (
+                        <a key={post.id} href={post.link} className="snap-start shrink-0 w-[85vw] md:w-[340px] pm-card p-6 border border-gray-100 hover:border-pm-green/30 transition-standard group flex flex-col bg-white hover:shadow-lg">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className="px-2.5 py-1 bg-green-50 text-pm-green rounded-lg text-[10px] font-black uppercase tracking-widest">{post.category}</span>
+                                    <span className="text-xs text-gray-400 font-bold">•</span>
+                                    <span className="text-xs text-gray-500 font-semibold">{post.readTime}</span>
+                                </div>
+                                <h4 className="text-xl font-bold font-heading text-gray-900 group-hover:text-pm-green transition-colors mb-3 line-clamp-2">{post.title}</h4>
+                                <p className="text-sm font-medium text-gray-500 line-clamp-3 mb-4 leading-relaxed">{post.description}</p>
+                            </div>
+                            <div className="pt-4 border-t border-gray-100 mt-auto flex justify-between items-center text-sm font-bold text-gray-400">
+                                <span>{post.date}</span>
+                                <span className="flex items-center gap-1 text-pm-green group-hover:translate-x-1 transition-transform">Read Article <ExternalLink className="w-4 h-4" /></span>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+
+                {/* Right Arrow */}
+                <button onClick={() => scrollBlogCarousel('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white border border-gray-200 rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-pm-green hover:border-pm-green/40 transition-all -mr-5 opacity-0 group-hover/blogcarousel:opacity-100">
+                    <ChevronRight className="w-5 h-5" />
+                </button>
+
+                {/* Fade Edges */}
+                <div className="pointer-events-none absolute top-0 bottom-8 left-0 w-16 bg-gradient-to-r from-gray-50/50 to-transparent hidden lg:block z-10"></div>
+                <div className="pointer-events-none absolute top-0 bottom-8 right-0 w-16 bg-gradient-to-l from-gray-50/50 to-transparent hidden lg:block z-10"></div>
+            </div>
+            
+            <div className="mt-8 text-center">
+                 <a href="/blog/index.html" className="inline-flex items-center gap-2 text-pm-green font-bold hover:underline">
+                      View All Blogs <ArrowRight className="w-4 h-4" />
+                 </a>
+            </div>
+        </div>
+      </section>
 
       {/* Contact Us Section */}
       <section className="bg-white py-24 px-6 border-t border-gray-100">
