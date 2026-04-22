@@ -5,6 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Sparkles, BookOpen, Presentation, ClipboardList, PenTool, CheckSquare, Library, Copy, Download, RotateCcw, ChevronDown, CheckCircle, LayoutDashboard, Settings, HelpCircle, History, FileText, Loader2, Trash2, X, Cloud, Save, Timer, Lock, Search, ExternalLink, Upload, FileQuestion } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure PDF.js worker via CDN to avoid Vite build quirks for workers
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 const TeacherDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
@@ -152,15 +156,52 @@ const TeacherDashboard = ({ user, onLogout }) => {
     setAssessSaved(false);
 
     try {
-      const fd = new FormData();
-      fd.append('file', assessFile);
-      fd.append('questionCount', assessQuestionCount);
-      fd.append('language', assessLanguage);
+      let imagesData = [];
+      
+      if (assessFile.type === 'application/pdf') {
+        const fileData = await assessFile.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: fileData }).promise;
+        
+        // Render up to first 8 pages to compress payload and optimize generation limits
+        const numPages = Math.min(pdf.numPages, 8);
+        
+        for (let i = 1; i <= numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          
+          await page.render({ canvasContext: context, viewport }).promise;
+          // Output as jpeg with compression to minimize payload size
+          const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+          imagesData.push({ data: base64, mimeType: 'image/jpeg' });
+        }
+      } else {
+        // Image file
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.readAsDataURL(assessFile);
+        });
+        imagesData.push({ data: base64, mimeType: assessFile.type });
+      }
+
+      const payload = {
+        images: imagesData,
+        questionCount: assessQuestionCount,
+        language: assessLanguage,
+        fileName: assessFile.name
+      };
 
       const response = await fetch(`${API_URL}/api/assessment/generate`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('pm_token')}` },
-        body: fd
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('pm_token')}` 
+        },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {

@@ -1,28 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const { supabaseAdmin } = require('../config/supabase');
 const { verifyToken } = require('../middleware/auth');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Multer config: store in memory, max 20MB (PDFs can be larger)
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 20 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-        if (allowed.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Only PDF and image files (PNG, JPG, WebP) are allowed'));
-        }
-    }
-});
-
 // Cooldown map
 const assessmentCooldowns = new Map();
 
-router.post('/generate', verifyToken, upload.single('file'), async (req, res) => {
+// Increase JSON body limit for base64 image payloads (needed for PDF-to-image conversion)
+const jsonParser = express.json({ limit: '4mb' });
+
+router.post('/generate', verifyToken, jsonParser, async (req, res) => {
     const userId = req.user.id;
     const geminiKey = process.env.GEMINI_API_KEY;
 
@@ -30,12 +18,21 @@ router.post('/generate', verifyToken, upload.single('file'), async (req, res) =>
         return res.status(500).json({ error: 'AI API Key is missing' });
     }
 
-    if (!req.file) {
-        return res.status(400).json({ error: 'Please upload a file (PDF or Image)' });
+    const { images, questionCount: rawQCount, language: rawLang, fileName } = req.body;
+
+    if (!images || !Array.isArray(images) || images.length === 0) {
+        return res.status(400).json({ error: 'No image data received. Please upload a file.' });
     }
 
-    const questionCount = Math.min(Math.max(parseInt(req.body.questionCount) || 5, 1), 10);
-    const language = req.body.language || 'English';
+    // Validate each image entry
+    for (const img of images) {
+        if (!img.data || !img.mimeType) {
+            return res.status(400).json({ error: 'Invalid image data format.' });
+        }
+    }
+
+    const questionCount = Math.min(Math.max(parseInt(rawQCount) || 5, 1), 10);
+    const language = rawLang || 'English';
 
     // Check Content Limit
     const { data: profile, error: limitError } = await supabaseAdmin
@@ -87,30 +84,25 @@ router.post('/generate', verifyToken, upload.single('file'), async (req, res) =>
         const genAI = new GoogleGenerativeAI(geminiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-        const file = req.file;
-        const base64Data = file.buffer.toString('base64');
+        // Build multimodal parts — all pages as images sent to Gemini
+        const parts = [];
 
-        // Determine the content descriptor for the prompt
-        const isImage = file.mimetype.startsWith('image/');
-        const contentDescriptor = isImage ? 'this image' : 'this document';
-
-        // Build multimodal parts — send the file (PDF or image) directly to Gemini
-        // Gemini natively supports PDFs as multimodal input, which handles:
-        //   - Scanned/image-heavy PDFs
-        //   - Non-Latin scripts (Assamese, Hindi, etc.)
-        //   - Mixed text + image content
-        //   - Any PDF that pdf-parse would fail to extract text from
-        const parts = [
-            {
+        // Add all images (could be multiple pages from a PDF)
+        for (const img of images) {
+            parts.push({
                 inlineData: {
-                    mimeType: file.mimetype,
-                    data: base64Data
+                    mimeType: img.mimeType,
+                    data: img.data // already base64
                 }
-            },
-            {
-                text: `You are an expert teacher and assessment designer.
+            });
+        }
 
-TASK: Generate EXACTLY ${questionCount} assessment questions based STRICTLY AND ONLY on the content visible in ${contentDescriptor}. Do NOT add any questions from outside this content.
+        const pageDesc = images.length > 1 ? `these ${images.length} pages/images` : 'this image';
+
+        parts.push({
+            text: `You are an expert teacher and assessment designer.
+
+TASK: Generate EXACTLY ${questionCount} assessment questions based STRICTLY AND ONLY on the content visible in ${pageDesc}. Do NOT add any questions from outside this content.
 
 IMPORTANT RULES:
 - Respond ONLY in ${language}.
@@ -122,8 +114,7 @@ IMPORTANT RULES:
 - After all questions, provide an "Answer Key" section with all correct answers listed.
 
 BEGIN YOUR RESPONSE WITH "Assessment Questions:" directly. No introductions.`
-            }
-        ];
+        });
 
         // Attempt generation with 1 automatic retry for transient stream errors
         let lastError = null;
@@ -181,4 +172,3 @@ BEGIN YOUR RESPONSE WITH "Assessment Questions:" directly. No introductions.`
 });
 
 module.exports = router;
-
