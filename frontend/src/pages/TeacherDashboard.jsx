@@ -6,9 +6,11 @@ import { LogOut, Sparkles, BookOpen, Presentation, ClipboardList, PenTool, Check
 import axios from 'axios';
 import { API_URL } from '../config';
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// Configure PDF.js worker via CDN to avoid Vite build quirks for workers
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+// Configure PDF.js worker using Vite's native asset URL handling
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
 
 const TeacherDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
